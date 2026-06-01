@@ -1,3 +1,6 @@
+# ==============================
+# IMPORTS
+# ==============================
 from flask import (Flask, render_template, request, Response, redirect, session, url_for, flash, send_file, jsonify, make_response)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -15,36 +18,33 @@ import uuid
 import json
 from decimal import Decimal
 import math
-from dotenv import load_dotenv
+import razorpay
 
-load_dotenv()
 
 # ==============================
 # APP CONFIGURATION
 # ==============================
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
-import razorpay
+app.secret_key = "fusion_secret_key"
+
 # ==============================
 # PAYMENT GATEWAY
 # ==============================
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+RAZORPAY_KEY_ID = "rzp_test_SPsNbr1p9JXcjC"        # Replace with your Razorpay key
+RAZORPAY_KEY_SECRET = "pnOYyp6lyEq3tj39DcFZ8cwm"  # Replace with your Razorpay secret
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # ==============================
 # MYSQL CONFIGURATION
 # ==============================
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
-app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'admin123'
+app.config['MYSQL_DB'] = 'restaurant_db'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
-
 
 # ==============================
 # DATABASE CONNECTION FUNCTION
@@ -52,20 +52,15 @@ mysql = MySQL(app)
 def connect_db():
     return mysql.connection
 
-
 # ==============================
-# HOME PAGE
+# LANDING PAGE
 # ==============================
 @app.route("/")
 def home():
     return render_template("Index.html")
 
-# ==============================
-# VISITOR MENU, ORDER, PAYMENT & RECEIPT
-# ==============================
-
 # ------------------------------
-# View Menu Page
+# View Menu Page for visitors
 # ------------------------------
 @app.route("/menu")
 def view_menu():
@@ -86,7 +81,6 @@ def view_menu():
         menu_items=menu_items,
         razorpay_key=RAZORPAY_KEY_ID
     )
-
 
 # ------------------------------
 # Create Razorpay Order
@@ -533,7 +527,6 @@ def register():
         return redirect("/login")
 
     return render_template("user/register.html")
-
 # ==============================
 # CUSTOMER DASHBOARD
 # ==============================
@@ -551,27 +544,20 @@ def customer_dashboard():
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        # User Details
-        cursor.execute(
-            "SELECT * FROM users WHERE user_id=%s",
-            (user_id,)
-        )
+        cursor.execute("SELECT * FROM users WHERE user_id=%s", (user_id,))
         user = cursor.fetchone()
 
-        # Orders
         cursor.execute("""
-            SELECT *
-            FROM orders
+            SELECT * FROM orders
             WHERE customer_id=%s
             ORDER BY order_date DESC
         """, (user_id,))
         orders = cursor.fetchall()
 
-        # Bookings
         cursor.execute("""
             SELECT tb.*, rt.table_number
             FROM table_bookings tb
-            LEFT JOIN restaurant_tables rt
+            JOIN restaurant_tables rt
             ON tb.table_id = rt.table_id
             WHERE tb.customer_id=%s
             ORDER BY tb.booking_date DESC
@@ -582,49 +568,31 @@ def customer_dashboard():
 
         for booking in bookings:
 
-            booking["can_order"] = False
-            booking["can_cancel"] = False
+            booking_date = booking["booking_date"]
+            booking_time = booking["booking_time"]
 
-            booking_date = booking.get("booking_date")
-            booking_time = booking.get("booking_time")
+            if isinstance(booking_time, timedelta):
+                seconds = booking_time.seconds
+                hours = seconds // 3600
+                minutes = (seconds % 3600) // 60
+                booking_time = time(hours, minutes)
 
-            # Skip invalid bookings
-            if not booking_date or not booking_time:
-                continue
+            booking_datetime = datetime.combine(booking_date, booking_time)
 
-            try:
-                # MySQL TIME sometimes returns timedelta
-                if isinstance(booking_time, timedelta):
-                    total_seconds = booking_time.seconds
-                    hours = total_seconds // 3600
-                    minutes = (total_seconds % 3600) // 60
-                    booking_time = time(hours, minutes)
+            start_order_time = booking_datetime - timedelta(hours=1)
+            cancel_limit = booking_datetime - timedelta(hours=6)
 
-                booking_datetime = datetime.combine(
-                    booking_date,
-                    booking_time
-                )
+            # Order button logic
+            if start_order_time <= now <= booking_datetime:
+                booking["can_order"] = True
+            else:
+                booking["can_order"] = False
 
-                start_order_time = booking_datetime - timedelta(hours=1)
-                cancel_limit = booking_datetime - timedelta(hours=6)
-
-                if start_order_time <= now <= booking_datetime:
-                    booking["can_order"] = True
-
-                if (
-                    now < cancel_limit and
-                    booking.get("booking_status") == "Booked"
-                ):
-                    booking["can_cancel"] = True
-
-            except Exception as e:
-                print("Booking Error:", e)
-                continue
-
-    except Exception as e:
-        print("Dashboard Error:", e)
-        flash(f"Dashboard Error: {str(e)}", "danger")
-        return redirect("/login")
+            # Cancel button logic
+            if now < cancel_limit and booking["booking_status"] == "Booked":
+                booking["can_cancel"] = True
+            else:
+                booking["can_cancel"] = False
 
     finally:
         cursor.close()
@@ -808,6 +776,9 @@ def view_cart():
 
     cart_items = cursor.fetchall()
 
+    cursor.execute("SELECT name, phone FROM users WHERE user_id=%s", (customer_id,))
+    customer = cursor.fetchone()
+
     cursor.close()
 
     total = sum(item["price"] * item["quantity"] for item in cart_items)
@@ -815,7 +786,8 @@ def view_cart():
     return render_template(
         "user/cart.html",
         cart=cart_items,
-        total=total
+        total=total,
+        customer=customer
     )
 @app.route("/update_cart_quantity", methods=["POST"])
 def update_cart_quantity():
@@ -1357,6 +1329,64 @@ def verify_booking_payment():
     except Exception as e:
         flash("Payment verification failed!", "danger")
         return redirect("/table_booking")
+
+#canceltableby customer
+@app.route("/cancel_booking/<int:booking_id>")
+def cancel_booking(booking_id):
+
+    if session.get("role") != "Customer":
+        return redirect("/login")
+
+    user_id = session.get("user_id")
+
+    conn = connect_db()
+    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute("""
+        SELECT booking_status, booking_date, booking_time
+        FROM table_bookings
+        WHERE booking_id=%s AND customer_id=%s
+    """,(booking_id,user_id))
+
+    booking = cursor.fetchone()
+
+    if booking and booking["booking_status"] == "Booked":
+
+        booking_date = booking["booking_date"]
+        booking_time = booking["booking_time"]
+
+        # convert timedelta to time if needed
+        if isinstance(booking_time, timedelta):
+            seconds = booking_time.seconds
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            booking_time = time(hours, minutes)
+
+        booking_datetime = datetime.combine(booking_date, booking_time)
+        now = datetime.now()
+
+        time_difference = booking_datetime - now
+
+        if time_difference >= timedelta(hours=6):
+
+            cursor.execute("""
+                UPDATE table_bookings
+                SET booking_status='Cancelled'
+                WHERE booking_id=%s
+            """,(booking_id,))
+
+            conn.commit()
+            flash("Booking cancelled successfully.", "success")
+
+        else:
+            flash("Booking can only be cancelled 6 hours before the reservation time.", "danger")
+
+    else:
+        flash("Invalid booking.", "danger")
+
+    cursor.close()
+
+    return redirect("/customer/dashboard")
 # =========================================================
 # ORDER FROM BOOKED TABLE (MENU PAGE)
 # =========================================================
@@ -1678,10 +1708,159 @@ def verify_table_payment():
         print(f"[verify_table_payment] ERROR: {e}")
         return jsonify({"status": "error", "message": "Server error. Please contact support."}), 500
 
+# ============================================================
+# CUSTOMER: ORDER HISTORY PAGE
+# ============================================================
+@app.route("/order-history")
+def order_history():
+    if session.get("role") != "Customer":
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    conn = connect_db()
+    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute("""
+        SELECT * FROM orders
+        WHERE customer_id=%s
+        ORDER BY order_date DESC
+    """, (user_id,))
+    orders = cursor.fetchall()
+    cursor.close()
+
+    return render_template("user/order_history.html", orders=orders)
+
+
+# ============================================================
+# CUSTOMER: MY BOOKINGS PAGE
+# ============================================================
+@app.route("/my-bookings")
+def my_bookings():
+    if session.get("role") != "Customer":
+        return redirect("/login")
+
+    from datetime import datetime, timedelta, time
+
+    user_id = session["user_id"]
+    conn = connect_db()
+    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute("""
+        SELECT tb.*, rt.table_number
+        FROM table_bookings tb
+        JOIN restaurant_tables rt ON tb.table_id = rt.table_id
+        WHERE tb.customer_id=%s
+        ORDER BY tb.booking_date DESC
+    """, (user_id,))
+    bookings = cursor.fetchall()
+    cursor.close()
+
+    now = datetime.now()
+    for booking in bookings:
+        booking_date = booking["booking_date"]
+        booking_time = booking["booking_time"]
+        if isinstance(booking_time, timedelta):
+            seconds = booking_time.seconds
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            booking_time = time(hours, minutes)
+        booking_datetime = datetime.combine(booking_date, booking_time)
+        start_order_time = booking_datetime - timedelta(hours=1)
+        cancel_limit = booking_datetime - timedelta(hours=6)
+        booking["can_order"] = start_order_time <= now <= booking_datetime
+        booking["can_cancel"] = now < cancel_limit and booking["booking_status"] == "Booked"
+
+    return render_template("user/my_bookings.html", bookings=bookings)
+
+
+# ============================================================
+# CUSTOMER: USER INFO API (for sidebar)
+# ============================================================
+@app.route("/api/user-info")
+def api_user_info():
+    if session.get("role") != "Customer":
+        return jsonify({}), 401
+    conn = connect_db()
+    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("SELECT name, phone, address FROM users WHERE user_id=%s", (session["user_id"],))
+    user = cursor.fetchone()
+    cursor.close()
+    if user:
+        return jsonify(user)
+    return jsonify({})
+
+
+# ============================================================
+# CUSTOMER: ORDER LOCATION API (for delivery tracking popup)
+# ============================================================
+@app.route("/api/order-location/<int:order_id>")
+def api_order_location(order_id):
+    if session.get("role") != "Customer":
+        return jsonify({}), 401
+    conn = connect_db()
+    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("""
+        SELECT o.latitude, o.longitude,
+               u.latitude AS rider_lat, u.longitude AS rider_lng
+        FROM orders o
+        LEFT JOIN users u ON u.user_id = o.delivery_id
+        WHERE o.order_id=%s AND o.customer_id=%s
+    """, (order_id, session["user_id"]))
+    row = cursor.fetchone()
+    cursor.close()
+    if row:
+        return jsonify({
+            "lat": float(row["latitude"]) if row["latitude"] else None,
+            "lng": float(row["longitude"]) if row["longitude"] else None,
+            "rider_lat": float(row["rider_lat"]) if row.get("rider_lat") else None,
+            "rider_lng": float(row["rider_lng"]) if row.get("rider_lng") else None,
+        })
+    return jsonify({})
+
+@app.route("/get_order_details/<int:order_id>")
+def get_order_details(order_id):
+
+    if session.get("role") != "Customer":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    conn = connect_db()
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+
+    # 🔹 Get order date
+    cur.execute("""
+        SELECT order_date
+        FROM orders
+        WHERE order_id=%s
+    """, (order_id,))
+    order = cur.fetchone()
+
+    # 🔹 Get items
+    cur.execute("""
+        SELECT oi.quantity,
+               oi.price,
+               m.item_name,
+               m.image
+        FROM order_items oi
+        JOIN menu m ON oi.item_id = m.item_id
+        WHERE oi.order_id=%s
+    """, (order_id,))
+    items = cur.fetchall()
+
+    cur.close()
+
+    return jsonify({
+        "order_date": order["order_date"].strftime("%d %b %Y, %I:%M %p"),
+        "items": items
+    })
+
+
+#CUSTOMEROVERHERE
+
+
 # =========================================================
 # SUPER ADMIN DASHBOARD
 # =========================================================
-@app.route("/superadmin_dashboard")
+@app.route("/super_admin_dashboard")
 def super_admin_dashboard():
 
     if session.get("role") != "SuperAdmin":
@@ -2109,6 +2288,10 @@ def manage_staff():
 # UPDATE STAFF
 # =========================================================
 
+# =========================================================
+# UPDATE STAFF
+# =========================================================
+
 @app.route("/super_admin/update-staff/<int:user_id>", methods=["POST"])
 def update_staff(user_id):
 
@@ -2171,11 +2354,13 @@ def update_staff(user_id):
     elif staff_role == "Manager":
 
         if new_password:
+            hashed_password = generate_password_hash(new_password)  # ← FIXED
+
             cursor.execute("""
                 UPDATE users
                 SET name=%s, phone=%s, address=%s, status=%s, password=%s
                 WHERE user_id=%s
-            """,(name,phone,address,status,new_password,user_id))
+            """,(name,phone,address,status,hashed_password,user_id))  # ← FIXED
         else:
             cursor.execute("""
                 UPDATE users
@@ -2187,8 +2372,6 @@ def update_staff(user_id):
     cursor.close()
 
     return redirect("/super_admin/manage-staff")
-
-
 
 # =========================================================
 # DELETE STAFF
@@ -2269,6 +2452,7 @@ def pay_salary(user_id):
     cursor.close()
 
     return redirect("/super_admin/manage-staff")
+
 # =====================================================
 # MANAGER DASHBOARD
 # =====================================================
@@ -3502,62 +3686,6 @@ def manager_cancel_booking():
     return jsonify({"status": "error", "message": "Booking not found"}), 404
 
 
-@app.route("/cancel_booking/<int:booking_id>")
-def cancel_booking(booking_id):
-
-    if session.get("role") != "Customer":
-        return redirect("/login")
-
-    user_id = session.get("user_id")
-
-    conn = connect_db()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-
-    cursor.execute("""
-        SELECT booking_status, booking_date, booking_time
-        FROM table_bookings
-        WHERE booking_id=%s AND customer_id=%s
-    """,(booking_id,user_id))
-
-    booking = cursor.fetchone()
-
-    if booking and booking["booking_status"] == "Booked":
-
-        booking_date = booking["booking_date"]
-        booking_time = booking["booking_time"]
-
-        # convert timedelta to time if needed
-        if isinstance(booking_time, timedelta):
-            seconds = booking_time.seconds
-            hours = seconds // 3600
-            minutes = (seconds % 3600) // 60
-            booking_time = time(hours, minutes)
-
-        booking_datetime = datetime.combine(booking_date, booking_time)
-        now = datetime.now()
-
-        time_difference = booking_datetime - now
-
-        if time_difference >= timedelta(hours=6):
-
-            cursor.execute("""
-                UPDATE table_bookings
-                SET booking_status='Cancelled'
-                WHERE booking_id=%s
-            """,(booking_id,))
-
-            conn.commit()
-            flash("Booking cancelled successfully.", "success")
-
-        else:
-            flash("Booking can only be cancelled 6 hours before the reservation time.", "danger")
-
-    else:
-        flash("Invalid booking.", "danger")
-
-    cursor.close()
-
-    return redirect("/customer/dashboard")
 # ============================================================
 # EMPLOYEE DASHBOARD ROUTER
 # ============================================================
@@ -3672,7 +3800,7 @@ def cook_dashboard():
     cursor.close()
 
     return render_template(
-        "Employee/cook_dashboard.html",
+        "employee/cook_dashboard.html",
         pending_orders=pending_orders,
         cooking_orders=cooking_orders,
         ready_orders=ready_orders,
@@ -3773,7 +3901,7 @@ def delivery_dashboard():
     ])
 
     return render_template(
-        "Employee/delivery_dashboard.html",
+        "employee/delivery_dashboard.html",
         deliveries=deliveries,
         pending_orders=pending_orders,
         picked_orders=picked_orders,
@@ -3884,7 +4012,7 @@ def waiter_dashboard():
     cursor.close()
 
     return render_template(
-        "Employee/waiter_dashboard.html",
+        "employee/waiter_dashboard.html",
         tables=tables
     )
 # ============================================================
@@ -3940,7 +4068,7 @@ def employee_profile():
     cursor.close()
 
     return render_template(
-        "Employee/edit_profile.html",
+        "employee/edit_profile.html",
         employee=employee
     )
 
@@ -4012,7 +4140,7 @@ def waiter_assigned_orders():
     cursor.close()
 
     return render_template(
-        "Employee/waiter_assigned_orders.html",
+        "employee/waiter_assigned_orders.html",
         orders=orders
     )
 
@@ -4046,7 +4174,7 @@ def cook_assigned_orders():
     cursor.close()
 
     return render_template(
-        "Employee/cook_assigned_orders.html",
+        "employee/cook_assigned_orders.html",
         orders=orders
     )
 @app.route("/delivery/assigned-orders")
@@ -4080,7 +4208,7 @@ def delivery_assigned_orders():
     cursor.close()
 
     return render_template(
-        "Employee/delivery_assigned_orders.html",
+        "employee/delivery_assigned_orders.html",
         orders=orders
     )
 @app.route('/start_delivery', methods=['POST'])
@@ -4175,133 +4303,6 @@ def verify_otp():
     else:
         cursor.close()
         return jsonify({"success": False, "message": "❌ Invalid OTP"})
-
-
-#============================================
-
-# ==============================
-# LOGOUT
-# ==============================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("home"))
-
-
-# ============================================================
-# NEW ROUTES TO ADD TO app.py
-# Add these routes before the final `if __name__ == "__main__":` block
-# ============================================================
-
-# ============================================================
-# CUSTOMER: ORDER HISTORY PAGE
-# ============================================================
-@app.route("/order-history")
-def order_history():
-    if session.get("role") != "Customer":
-        return redirect("/login")
-
-    user_id = session["user_id"]
-    conn = connect_db()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-
-    cursor.execute("""
-        SELECT * FROM orders
-        WHERE customer_id=%s
-        ORDER BY order_date DESC
-    """, (user_id,))
-    orders = cursor.fetchall()
-    cursor.close()
-
-    return render_template("user/order_history.html", orders=orders)
-
-
-# ============================================================
-# CUSTOMER: MY BOOKINGS PAGE
-# ============================================================
-@app.route("/my-bookings")
-def my_bookings():
-    if session.get("role") != "Customer":
-        return redirect("/login")
-
-    from datetime import datetime, timedelta, time
-
-    user_id = session["user_id"]
-    conn = connect_db()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-
-    cursor.execute("""
-        SELECT tb.*, rt.table_number
-        FROM table_bookings tb
-        JOIN restaurant_tables rt ON tb.table_id = rt.table_id
-        WHERE tb.customer_id=%s
-        ORDER BY tb.booking_date DESC
-    """, (user_id,))
-    bookings = cursor.fetchall()
-    cursor.close()
-
-    now = datetime.now()
-    for booking in bookings:
-        booking_date = booking["booking_date"]
-        booking_time = booking["booking_time"]
-        if isinstance(booking_time, timedelta):
-            seconds = booking_time.seconds
-            hours = seconds // 3600
-            minutes = (seconds % 3600) // 60
-            booking_time = time(hours, minutes)
-        booking_datetime = datetime.combine(booking_date, booking_time)
-        start_order_time = booking_datetime - timedelta(hours=1)
-        cancel_limit = booking_datetime - timedelta(hours=6)
-        booking["can_order"] = start_order_time <= now <= booking_datetime
-        booking["can_cancel"] = now < cancel_limit and booking["booking_status"] == "Booked"
-
-    return render_template("user/my_bookings.html", bookings=bookings)
-
-
-# ============================================================
-# CUSTOMER: USER INFO API (for sidebar)
-# ============================================================
-@app.route("/api/user-info")
-def api_user_info():
-    if session.get("role") != "Customer":
-        return jsonify({}), 401
-    conn = connect_db()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute("SELECT name, phone, address FROM users WHERE user_id=%s", (session["user_id"],))
-    user = cursor.fetchone()
-    cursor.close()
-    if user:
-        return jsonify(user)
-    return jsonify({})
-
-
-# ============================================================
-# CUSTOMER: ORDER LOCATION API (for delivery tracking popup)
-# ============================================================
-@app.route("/api/order-location/<int:order_id>")
-def api_order_location(order_id):
-    if session.get("role") != "Customer":
-        return jsonify({}), 401
-    conn = connect_db()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute("""
-        SELECT o.latitude, o.longitude,
-               u.latitude AS rider_lat, u.longitude AS rider_lng
-        FROM orders o
-        LEFT JOIN users u ON u.user_id = o.delivery_id
-        WHERE o.order_id=%s AND o.customer_id=%s
-    """, (order_id, session["user_id"]))
-    row = cursor.fetchone()
-    cursor.close()
-    if row:
-        return jsonify({
-            "lat": float(row["latitude"]) if row["latitude"] else None,
-            "lng": float(row["longitude"]) if row["longitude"] else None,
-            "rider_lat": float(row["rider_lat"]) if row.get("rider_lat") else None,
-            "rider_lng": float(row["rider_lng"]) if row.get("rider_lng") else None,
-        })
-    return jsonify({})
-
 
 # ============================================================
 # DELIVERY BOY: UPDATE RIDER LOCATION (Continuous GPS)
@@ -4531,40 +4532,17 @@ def api_waiter_update_status():
 
     return jsonify({"status": "ok"})
 
-@app.route("/get_order_details/<int:order_id>")
-def get_order_details(order_id):
 
-    if session.get("role") != "Customer":
-        return jsonify({"error": "Unauthorized"}), 403
+#============================================
 
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+# ==============================
+# LOGOUT
+# ==============================
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
 
-    # 🔹 Get order date
-    cur.execute("""
-        SELECT order_date
-        FROM orders
-        WHERE order_id=%s
-    """, (order_id,))
-    order = cur.fetchone()
-
-    # 🔹 Get items
-    cur.execute("""
-        SELECT oi.quantity,
-               oi.price,
-               m.item_name,
-               m.image
-        FROM order_items oi
-        JOIN menu m ON oi.item_id = m.item_id
-        WHERE oi.order_id=%s
-    """, (order_id,))
-    items = cur.fetchall()
-
-    cur.close()
-
-    return jsonify({
-        "order_date": order["order_date"].strftime("%d %b %Y, %I:%M %p"),
-        "items": items
-    })
 
 # ==============================
 # RUN
