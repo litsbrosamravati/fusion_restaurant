@@ -1,6 +1,3 @@
-# ==============================
-# IMPORTS
-# ==============================
 from flask import (Flask, render_template, request, Response, redirect, session, url_for, flash, send_file, jsonify, make_response)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -30,19 +27,27 @@ app.secret_key = "fusion_secret_key"
 # ==============================
 # PAYMENT GATEWAY
 # ==============================
-RAZORPAY_KEY_ID = "rzp_test_SPsNbr1p9JXcjC"        # Replace with your Razorpay key
-RAZORPAY_KEY_SECRET = "pnOYyp6lyEq3tj39DcFZ8cwm"  # Replace with your Razorpay secret
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # ==============================
 # MYSQL CONFIGURATION
 # ==============================
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'admin123'
-app.config['MYSQL_DB'] = 'restaurant_db'
+app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
+app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT'))
+app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
+app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+
+
+print("MYSQL_HOST =", app.config['MYSQL_HOST'])
+print("MYSQL_PORT =", app.config['MYSQL_PORT'])
+print("MYSQL_USER =", app.config['MYSQL_USER'])
+print("MYSQL_DB =", app.config['MYSQL_DB'])
+
 
 mysql = MySQL(app)
 
