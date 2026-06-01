@@ -551,20 +551,27 @@ def customer_dashboard():
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        cursor.execute("SELECT * FROM users WHERE user_id=%s", (user_id,))
+        # User Details
+        cursor.execute(
+            "SELECT * FROM users WHERE user_id=%s",
+            (user_id,)
+        )
         user = cursor.fetchone()
 
+        # Orders
         cursor.execute("""
-            SELECT * FROM orders
+            SELECT *
+            FROM orders
             WHERE customer_id=%s
             ORDER BY order_date DESC
         """, (user_id,))
         orders = cursor.fetchall()
 
+        # Bookings
         cursor.execute("""
             SELECT tb.*, rt.table_number
             FROM table_bookings tb
-            JOIN restaurant_tables rt
+            LEFT JOIN restaurant_tables rt
             ON tb.table_id = rt.table_id
             WHERE tb.customer_id=%s
             ORDER BY tb.booking_date DESC
@@ -575,31 +582,49 @@ def customer_dashboard():
 
         for booking in bookings:
 
-            booking_date = booking["booking_date"]
-            booking_time = booking["booking_time"]
+            booking["can_order"] = False
+            booking["can_cancel"] = False
 
-            if isinstance(booking_time, timedelta):
-                seconds = booking_time.seconds
-                hours = seconds // 3600
-                minutes = (seconds % 3600) // 60
-                booking_time = time(hours, minutes)
+            booking_date = booking.get("booking_date")
+            booking_time = booking.get("booking_time")
 
-            booking_datetime = datetime.combine(booking_date, booking_time)
+            # Skip invalid bookings
+            if not booking_date or not booking_time:
+                continue
 
-            start_order_time = booking_datetime - timedelta(hours=1)
-            cancel_limit = booking_datetime - timedelta(hours=6)
+            try:
+                # MySQL TIME sometimes returns timedelta
+                if isinstance(booking_time, timedelta):
+                    total_seconds = booking_time.seconds
+                    hours = total_seconds // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    booking_time = time(hours, minutes)
 
-            # Order button logic
-            if start_order_time <= now <= booking_datetime:
-                booking["can_order"] = True
-            else:
-                booking["can_order"] = False
+                booking_datetime = datetime.combine(
+                    booking_date,
+                    booking_time
+                )
 
-            # Cancel button logic
-            if now < cancel_limit and booking["booking_status"] == "Booked":
-                booking["can_cancel"] = True
-            else:
-                booking["can_cancel"] = False
+                start_order_time = booking_datetime - timedelta(hours=1)
+                cancel_limit = booking_datetime - timedelta(hours=6)
+
+                if start_order_time <= now <= booking_datetime:
+                    booking["can_order"] = True
+
+                if (
+                    now < cancel_limit and
+                    booking.get("booking_status") == "Booked"
+                ):
+                    booking["can_cancel"] = True
+
+            except Exception as e:
+                print("Booking Error:", e)
+                continue
+
+    except Exception as e:
+        print("Dashboard Error:", e)
+        flash(f"Dashboard Error: {str(e)}", "danger")
+        return redirect("/login")
 
     finally:
         cursor.close()
