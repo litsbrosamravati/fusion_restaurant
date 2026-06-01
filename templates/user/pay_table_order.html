@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Order Payment | Fusion Feast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
+    <style>
+        #successOverlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+            z-index: 9999; align-items: center; justify-content: center;
+        }
+        #successOverlay.show { display: flex; }
+        .success-card {
+            background: var(--surface, #1a1a1a); border: 1px solid #2a2a2a;
+            border-radius: 20px; padding: 40px 32px; text-align: center;
+            max-width: 380px; width: 90%;
+            animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+        .success-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+        .success-card h2 { font-size:1.4rem; font-weight:700; color:#fff; margin-bottom:8px; }
+        .success-card p  { font-size:0.88rem; color:#aaa; margin-bottom:6px; }
+        .success-order-id {
+            display: inline-block; background: rgba(232,132,58,0.15);
+            color: #e8843a; font-weight:700; font-size:0.9rem;
+            padding: 6px 16px; border-radius: 30px; margin: 12px 0 20px;
+        }
+        .btn-go {
+            display:block; width:100%; padding:13px; background:#e8843a; color:#fff;
+            font-weight:700; font-size:0.95rem; border:none; border-radius:10px;
+            cursor:pointer; text-decoration:none; margin-bottom:10px; box-sizing:border-box;
+        }
+        .btn-go:hover { opacity:0.9; }
+        .btn-go.secondary { background:transparent; border:1px solid #333; color:#ccc; }
+        #processingOverlay {
+            display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85);
+            z-index:9998; align-items:center; justify-content:center;
+            flex-direction:column; gap:16px; color:#fff; font-size:0.95rem;
+        }
+        #processingOverlay.show { display:flex; }
+        .spinner {
+            width:44px; height:44px; border:4px solid #333;
+            border-top-color:#e8843a; border-radius:50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .countdown { font-size:0.75rem; color:#666; margin-top:8px; }
+    </style>
+</head>
+<body>
+
+<div class="pay-page-wrap">
+    <div class="pay-card fade-in">
+        <div style="font-size:2.5rem; margin-bottom:14px;">🍽️</div>
+        <h2>Complete Table Order</h2>
+        <p>Secure payment for your in-restaurant order</p>
+        <div class="pay-amount">
+            <span>₹</span>{{ (amount / 100)|int }}
+        </div>
+        <button id="pay-btn" class="btn-success" style="width:100%; padding:14px; font-size:0.95rem;">
+            Pay Now
+        </button>
+        <a href="/view-table-cart" class="pay-back-link">← Back to Cart</a>
+    </div>
+</div>
+
+<!-- Processing Overlay -->
+<div id="processingOverlay">
+    <div class="spinner"></div>
+    <span>Confirming your order…</span>
+</div>
+
+<!-- Success Overlay -->
+<div id="successOverlay">
+    <div class="success-card">
+        <span class="success-icon">🎉</span>
+        <h2>Order Placed!</h2>
+        <p>Your table order has been confirmed.</p>
+        <div class="success-order-id" id="orderIdBadge">Order #—</div>
+        <p style="font-size:0.8rem; color:#888;">The kitchen is already on it 🍳</p>
+        <a href="/customer/dashboard" class="btn-go">Go to Dashboard</a>
+        <a href="/my-bookings" class="btn-go secondary">View My Bookings</a>
+        <div class="countdown" id="countdown">Redirecting in 5s…</div>
+    </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var rzp = new Razorpay({
+    key:         "{{ razorpay_key }}",
+    amount:      "{{ amount }}",
+    currency:    "INR",
+    name:        "Fusion Feast",
+    description: "Table Order Payment",
+    order_id:    "{{ razorpay_order_id }}",
+    theme:       { color: "#e8843a" },
+    handler: function(response) {
+        document.getElementById("processingOverlay").classList.add("show");
+        fetch("/verify-table-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id:   response.razorpay_order_id,
+                razorpay_signature:  response.razorpay_signature
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("processingOverlay").classList.remove("show");
+            if (data.status === "success") {
+                if (data.order_id) {
+                    document.getElementById("orderIdBadge").textContent = "Order #" + data.order_id;
+                }
+                document.getElementById("successOverlay").classList.add("show");
+                // Countdown + auto-redirect
+                var secs = 5;
+                var cd = document.getElementById("countdown");
+                var timer = setInterval(function() {
+                    secs--;
+                    cd.textContent = "Redirecting in " + secs + "s…";
+                    if (secs <= 0) {
+                        clearInterval(timer);
+                        window.location.href = "/customer/dashboard";
+                    }
+                }, 1000);
+            } else {
+                var msg = data.message || "Payment verification failed. Please contact support.";
+                alert("❌ " + msg);
+            }
+        })
+        .catch(function(err) {
+            document.getElementById("processingOverlay").classList.remove("show");
+            console.error("Fetch error:", err);
+            alert("Something went wrong communicating with the server. Please contact support.");
+        });
+    },
+    modal: {
+        ondismiss: function() { window.location.href = "/payment_cancelled?source=table"; }
+    }
+});
+document.getElementById("pay-btn").onclick = function() { rzp.open(); };
+</script>
+</body>
+</html>

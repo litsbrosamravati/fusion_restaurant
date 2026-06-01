@@ -1,0 +1,164 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}My Orders | Cook | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<style>
+  .btn-cook-start {
+    height: 30px; padding: 0 14px;
+    background: #ea580c; color: #fff; border: none;
+    border-radius: 7px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: background .15s; font-family: inherit;
+  }
+  .btn-cook-start:hover { background: #c2410c; }
+  .btn-cook-ready {
+    height: 30px; padding: 0 14px;
+    background: #16a34a; color: #fff; border: none;
+    border-radius: 7px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: background .15s; font-family: inherit;
+  }
+  .btn-cook-ready:hover { background: #15803d; }
+  .btn-cook-start:disabled, .btn-cook-ready:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-done { font-size: 12px; color: #9a9690; font-weight: 500; }
+  .notif-toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .notif-toast { display: flex; align-items: flex-start; gap: 10px; background: #fff; border: 1px solid #e8e5e0; border-radius: 12px; padding: 14px 16px; min-width: 260px; max-width: 340px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); transition: opacity .4s, transform .4s; }
+  .notif-toast.success { border-left: 3px solid #16a34a; }
+  .notif-toast.error   { border-left: 3px solid #dc2626; }
+  .nt-icon  { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .nt-title { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+  .nt-body  { font-size: 12px; color: #8a8580; }
+</style>
+
+<div class="page-title">👨‍🍳 My Assigned Orders</div>
+
+<div class="orders-section">
+    <div class="os-head">
+        <h3>All Assigned Orders</h3>
+        {% if orders %}<span class="os-count">{{ orders|length }} order{{ 's' if orders|length != 1 else '' }}</span>{% endif %}
+    </div>
+
+    {% if orders %}
+    <div style="overflow-x:auto;">
+    <table class="orders-table">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+
+                <th>Type</th>
+                <th>Table</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr id="row-{{ order.order_id }}">
+                <td style="font-weight:800;color:var(--orange);">#{{ order.order_id }}</td>
+                <td style="font-weight:700;color:var(--text-h);">{{ order.customer_name }}</td>
+                <td>
+                    <span style="font-size:11px;background:var(--bg);border:1px solid var(--border);padding:3px 9px;border-radius:6px;font-weight:700;">
+                        {{ order.order_type }}
+                    </span>
+                </td>
+                <td style="font-weight:700;color:var(--text-h);">
+                    {% if order.table_id %}Table {{ order.table_id }}{% else %}<span style="color:var(--text-p);">—</span>{% endif %}
+                </td>
+                <td style="font-weight:800;color:var(--text-h);">₹{{ order.total_amount }}</td>
+                <td>
+                    <span class="status {{ order.status|lower }} status-pill-{{ order.order_id }}">{{ order.status }}</span>
+                </td>
+                <td style="color:var(--text-p);font-size:12.5px;">{{ order.order_date }}</td>
+                <td class="action-cell-{{ order.order_id }}">
+                    {% if order.status == 'Pending' %}
+                        <button class="btn-cook-start" onclick="updateCookStatus({{ order.order_id }}, 'Cooking', this)">🍳 Start Cooking</button>
+                    {% elif order.status == 'Cooking' %}
+                        <button class="btn-cook-ready" onclick="updateCookStatus({{ order.order_id }}, 'Ready', this)">✅ Mark Ready</button>
+                    {% else %}
+                        <span class="status-done">{{ order.status }} ✓</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="no-orders">
+        <span class="empty-icon">📭</span>
+        No orders assigned yet.
+    </div>
+    {% endif %}
+</div>
+
+<div class="notif-toast-container" id="cookToasts"></div>
+
+<script>
+function updateCookStatus(orderId, newStatus, btn) {
+    btn.disabled = true;
+
+    fetch('/api/cook/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: newStatus })
+    })
+    .then(r => {
+        if (r.status === 401) throw new Error('Session expired — please log in again');
+        if (!r.ok) throw new Error('Server error (' + r.status + ')');
+        return r.json();
+    })
+    .then(data => {
+        if (data.status === 'ok') {
+            const msgs = {
+                'Cooking': { title: '🍳 Cooking Started', body: 'Order #' + orderId + ' is now being cooked' },
+                'Ready':   { title: '✅ Order Ready',     body: 'Order #' + orderId + ' is ready for pickup' }
+            };
+            const m = msgs[newStatus] || { title: 'Updated', body: '' };
+            showToast(m.title, m.body, 'success');
+
+            // Update status pill
+            const pill = document.querySelector('.status-pill-' + orderId);
+            if (pill) {
+                pill.className = 'status ' + newStatus.toLowerCase() + ' status-pill-' + orderId;
+                pill.textContent = newStatus;
+            }
+
+            // Update action button
+            const cell = document.querySelector('.action-cell-' + orderId);
+            if (cell) {
+                if (newStatus === 'Cooking') {
+                    cell.innerHTML = '<button class="btn-cook-ready" onclick="updateCookStatus(' + orderId + ',\'Ready\',this)">✅ Mark Ready</button>';
+                } else {
+                    cell.innerHTML = '<span class="status-done">' + newStatus + ' ✓</span>';
+                }
+            }
+        } else {
+            showToast('Error', data.error || 'Could not update status', 'error');
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        showToast('Error', err.message || 'Could not reach server. Try again.', 'error');
+        btn.disabled = false;
+    });
+}
+
+function showToast(title, body, type) {
+    const icons = { success: '✅', error: '❌' };
+    const c = document.getElementById('cookToasts');
+    const t = document.createElement('div');
+    t.className = 'notif-toast ' + type;
+    t.innerHTML = '<div class="nt-icon">' + (icons[type] || '🔔') + '</div>'
+        + '<div><div class="nt-title">' + title + '</div><div class="nt-body">' + body + '</div></div>';
+    c.appendChild(t);
+    setTimeout(function() {
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(10px)';
+        setTimeout(function() { t.remove(); }, 420);
+    }, 4000);
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "User/user_base.html" %}
+{% block title %}Table Booking Payment | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="pay-page-wrap">
+    <div class="pay-card fade-in">
+        <div style="font-size:2.5rem; margin-bottom:14px;">🪑</div>
+        <h2>Complete Booking Payment</h2>
+        <p>Secure payment to confirm your table reservation</p>
+
+        <div class="pay-amount">
+            <span>₹</span>{{ total_price }}
+        </div>
+
+        <button id="pay-btn" class="btn" style="width:100%; padding:14px; font-size:0.95rem;">
+            Pay Now with Razorpay
+        </button>
+
+        <a href="/table_booking" class="pay-back-link">← Back to Table Booking</a>
+    </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var rzp = new Razorpay({
+    key:         "{{ razorpay_key }}",
+    amount:      "{{ amount }}",
+    currency:    "INR",
+    name:        "Fusion Feast",
+    description: "Table Booking",
+    order_id:    "{{ razorpay_order_id }}",
+    theme:       { color: "#e8843a" },
+    modal: {
+        ondismiss: function() { window.location.href="/payment_cancelled?source=table"; }
+    },
+    handler: function(response) {
+        var form=document.createElement("form");
+        form.method="POST"; form.action="/verify_booking_payment";
+        [
+            ["razorpay_payment_id",response.razorpay_payment_id],
+            ["razorpay_order_id",  response.razorpay_order_id],
+            ["razorpay_signature", response.razorpay_signature],
+            ["table_id",           "{{ table_id }}"],
+            ["booking_date",       "{{ booking_date }}"],
+            ["booking_time",       "{{ booking_time }}"],
+            ["guests",             "{{ guests }}"],
+            ["total_price",        "{{ total_price }}"]
+        ].forEach(([name,value])=>{
+            var inp=document.createElement("input");
+            inp.type="hidden"; inp.name=name; inp.value=value;
+            form.appendChild(inp);
+        });
+        document.body.appendChild(form); form.submit();
+    }
+});
+document.getElementById("pay-btn").onclick=function(){rzp.open();};
+</script>
+
+{% endblock %}

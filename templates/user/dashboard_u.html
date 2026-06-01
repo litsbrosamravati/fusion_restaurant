@@ -1,0 +1,317 @@
+{% extends "User/user_base.html" %}
+{% block title %}Dashboard | Fusion Feast{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<div class="page-wrap" style="max-width:1100px; margin:0 auto;">
+
+    <!-- Header -->
+    <div class="dash-header fade-in">
+        <div>
+            <h1>Hey, <span>{{ user.name.split()[0] }}</span> 👋</h1>
+            <p>Welcome back — what are you craving today?</p>
+        </div>
+        <div class="header-avatar">{{ user.name[0].upper() }}</div>
+    </div>
+
+    <!-- Food Hero Strip -->
+    <div class="food-hero-strip fade-in">
+        <div class="food-hero-cell">
+            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=260&fit=crop&auto=format" alt="Pizza">
+            <span class="cell-label">Pizza</span>
+        </div>
+        <div class="food-hero-cell">
+            <img src="https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=260&fit=crop&auto=format" alt="Burger">
+            <span class="cell-label">Burgers</span>
+        </div>
+        <div class="food-hero-cell">
+            <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=260&fit=crop&auto=format" alt="Salads">
+            <span class="cell-label">Salads</span>
+        </div>
+        <div class="food-hero-cell">
+            <img src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&h=260&fit=crop&auto=format" alt="Pasta">
+            <span class="cell-label">Pasta</span>
+        </div>
+        <div class="food-hero-cell">
+            <img src="https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&h=260&fit=crop&auto=format" alt="Desserts">
+            <span class="cell-label">Desserts</span>
+        </div>
+    </div>
+
+    <!-- Discount Banner -->
+    {% set total_orders = orders|length %}
+    {% set orders_in_cycle = total_orders % 10 %}
+    {% set remaining_for_discount = 10 - orders_in_cycle %}
+
+    <div class="discount-banner fade-in">
+        <div class="disc-icon">🎁</div>
+        <div class="disc-progress-wrap">
+            <div class="disc-title">
+                {% if orders_in_cycle == 0 and total_orders > 0 %}
+                    🎉 Your next order gets 30% OFF!
+                {% else %}
+                    {{ remaining_for_discount }} more order{{ 's' if remaining_for_discount != 1 else '' }} to unlock 30% discount
+                {% endif %}
+            </div>
+            <div class="disc-sub">Every 10th order = 30% savings · Keep ordering to earn!</div>
+            <div class="disc-progress-bar">
+                <div class="disc-progress-fill" style="width: {{ (orders_in_cycle / 10 * 100)|int }}%"></div>
+            </div>
+        </div>
+        <div class="disc-badge">{{ orders_in_cycle }}/10</div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card fade-in">
+            <div class="stat-icon">🛒</div>
+            <div class="stat-value">{{ orders|length }}</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card fade-in">
+            <div class="stat-icon">🪑</div>
+            <div class="stat-value">{{ bookings|length }}</div>
+            <div class="stat-label">Table Bookings</div>
+        </div>
+        <div class="stat-card fade-in">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">{{ orders|selectattr('status','equalto','Delivered')|list|length }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card fade-in">
+            <div class="stat-icon">🎁</div>
+            <div class="stat-value">{{ (orders|length // 10) }}</div>
+            <div class="stat-label">Discounts Earned</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:28px;">
+        <a href="{{ url_for('order_online') }}" class="btn">🛍️ Order Now</a>
+        <a href="{{ url_for('table_booking') }}" class="btn-secondary">🪑 Book a Table</a>
+        <a href="/order-history" class="btn-secondary">📋 Order History</a>
+    </div>
+
+    <!-- Orders + Bookings -->
+    <div class="two-col">
+
+        <!-- Recent Orders -->
+        <div class="glass-card fade-in">
+            <div class="section-header">
+                <div class="section-title">
+                    🛒 Recent Orders
+                    {% if orders %}<span class="count-badge">{{ [orders|length, 3]|min }}</span>{% endif %}
+                </div>
+                <a href="/order-history" class="see-more-btn">More →</a>
+            </div>
+
+            {% if orders %}
+                {% for order in orders[:3] %}
+                <div class="order-card">
+                    <div class="order-top">
+                        <div>
+                            <div class="order-id">Order <span>#{{ order.order_id }}</span></div>
+                            <div style="margin-top:6px;">
+                                <span class="status-pill {{ order.status }}">
+                                    <span class="status-dot {% if order.status in ['Pending','Preparing','Delivering'] %}pulse{% endif %}"></span>
+                                    {{ order.status }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="order-amount">₹{{ "%.0f"|format(order.total_amount) }}</div>
+                    </div>
+
+                    <div class="order-meta">
+                        {% if order.order_type %}<div class="order-meta-item">{{ order.order_type }}</div>{% endif %}
+                        {% if order.order_date %}<div class="order-meta-item">{{ order.order_date.strftime('%d %b, %I:%M %p') }}</div>{% endif %}
+                    </div>
+
+                    {% if order.status == "Delivering" and order.delivery_otp %}
+                    <div class="otp-box">
+                        <div>
+                            <div class="otp-label">🚴 Delivery OTP</div>
+                            <div class="otp-description">Share with your rider</div>
+                        </div>
+                        <div class="otp-digits">
+                            {% for digit in order.delivery_otp|string %}
+                            <div class="otp-digit">{{ digit }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="order-actions">
+                        {% if order.status == "Delivering" %}
+                        <button class="btn-track" onclick="openDeliveryMap({{ order.order_id }})">📍 Track</button>
+                        {% endif %}
+                        {% if order.status == "Pending" %}
+                        <a href="/cancel_order/{{ order.order_id }}" class="btn-cancel"
+                           onclick="return confirm('Cancel this order?')">Cancel</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🍽️</div>
+                <p>No orders yet — start exploring our menu!</p>
+                <a href="{{ url_for('order_online') }}" class="btn" style="margin-top:16px;">Browse Menu</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Bookings -->
+        <div class="glass-card fade-in">
+            <div class="section-header">
+                <div class="section-title">
+                    🪑 Recent Bookings
+                    {% if bookings %}<span class="count-badge">{{ [bookings|length, 3]|min }}</span>{% endif %}
+                </div>
+                <a href="/my-bookings" class="see-more-btn">More →</a>
+            </div>
+
+            {% if bookings %}
+                {% for booking in bookings[:3] %}
+                <div class="booking-card">
+                    <div class="order-top">
+                        <div>
+                            <div class="order-id">Table <span>#{{ booking.table_number }}</span>
+                                <span style="font-size:0.72rem; color:var(--text-muted);">· #{{ booking.booking_id }}</span>
+                            </div>
+                            <div style="margin-top:6px;">
+                                <span class="status-pill {{ booking.booking_status }}">
+                                    <span class="status-dot {% if booking.booking_status == 'Booked' %}pulse{% endif %}"></span>
+                                    {{ booking.booking_status }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="booking-info-grid">
+                        <div class="booking-info-item">
+                            <div class="bi-label">Date</div>
+                            <div class="bi-value">{{ booking.booking_date }}</div>
+                        </div>
+                        <div class="booking-info-item">
+                            <div class="bi-label">Time</div>
+                            <div class="bi-value">{{ booking.booking_time }}</div>
+                        </div>
+                        <div class="booking-info-item">
+                            <div class="bi-label">Guests</div>
+                            <div class="bi-value">{{ booking.guests }}</div>
+                        </div>
+                        <div class="booking-info-item">
+                            <div class="bi-label">Payment</div>
+                            <div class="bi-value" style="color:{% if booking.payment_status == 'Paid' %}var(--green){% else %}var(--yellow){% endif %};">
+                                {{ booking.payment_status }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="booking-actions">
+                        {% if booking.booking_status == "Booked" %}
+                            {% if booking.can_order %}
+                            <a href="/order-from-table/{{ booking.booking_id }}" class="btn" style="font-size:0.78rem; padding:7px 14px;">🍽 Order</a>
+                            {% endif %}
+                            {% if booking.can_cancel %}
+                            <a href="/cancel_booking/{{ booking.booking_id }}" class="btn-cancel" style="font-size:0.78rem; padding:7px 14px;"
+                               onclick="return confirm('Cancel booking?')">Cancel</a>
+                            {% endif %}
+                        {% else %}
+                            <span style="font-size:0.75rem; color:var(--text-muted);">✕ Cancelled</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🪑</div>
+                <p>No bookings yet. Reserve your table!</p>
+                <a href="{{ url_for('table_booking') }}" class="btn" style="margin-top:16px;">Book a Table</a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Restaurant Map -->
+    <div class="map-card fade-in">
+        <div class="map-card-header">
+            <div>
+                <h3>📍 Find Us</h3>
+                <p>Fusion Feast · Nagpur, Maharashtra</p>
+            </div>
+            <a href="https://www.google.com/maps/search/?api=1&query=20.9502,77.7644" target="_blank" class="see-more-btn">Open Maps →</a>
+        </div>
+        <div id="restaurant-map"></div>
+    </div>
+
+</div>
+
+<!-- Delivery Map Popup -->
+<div id="deliveryMapOverlay" class="map-popup-overlay">
+    <div class="map-popup">
+        <div class="map-popup-header">
+            <h3>🛵 Live Delivery Tracking</h3>
+            <button class="close-map-btn" onclick="closeDeliveryMap()">✕</button>
+        </div>
+        <div id="deliveryMap"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const RLAT = 20.95024, RLNG = 77.76438;
+    const rmap = L.map('restaurant-map', { zoomControl:true, scrollWheelZoom:false }).setView([RLAT, RLNG], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(rmap);
+    const icon = L.divIcon({
+        html:`<div style="background:#e8843a;color:#fff;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.5);">🍽</div>`,
+        iconSize:[36,36], iconAnchor:[18,18], className:''
+    });
+    L.marker([RLAT,RLNG],{icon}).addTo(rmap).bindPopup('<b>Fusion Feast</b><br>Come visit us!').openPopup();
+});
+
+let deliveryMap=null, deliveryWatch=null, riderMarker=null, destMarker=null;
+
+function openDeliveryMap(orderId) {
+    document.getElementById('deliveryMapOverlay').classList.add('open');
+    document.body.style.overflow='hidden';
+    setTimeout(()=>{
+        if (!deliveryMap) {
+            deliveryMap=L.map('deliveryMap').setView([20.9502,77.7644],13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(deliveryMap);
+        }
+        fetch(`/api/order-location/${orderId}`).then(r=>r.json()).then(data=>{
+            if(data.lat && data.lng){
+                const di=L.divIcon({html:`<div style="background:#3b82f6;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;">🏠</div>`,iconSize:[32,32],iconAnchor:[16,16],className:''});
+                if(destMarker) destMarker.remove();
+                destMarker=L.marker([data.lat,data.lng],{icon:di}).addTo(deliveryMap).bindPopup('Your Location').openPopup();
+            }
+            if(data.rider_lat && data.rider_lng) updateRiderMarker(data.rider_lat,data.rider_lng);
+        }).catch(()=>{});
+        deliveryWatch=setInterval(()=>{
+            fetch(`/api/rider-location/${orderId}`).then(r=>r.json()).then(data=>{
+                if(data.lat && data.lng) updateRiderMarker(data.lat,data.lng);
+            }).catch(()=>{});
+        },5000);
+    },100);
+}
+
+function updateRiderMarker(lat,lng){
+    if(!deliveryMap) return;
+    const ri=L.divIcon({html:`<div style="background:#22c55e;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #fff;">🛵</div>`,iconSize:[34,34],iconAnchor:[17,17],className:''});
+    if(riderMarker){ riderMarker.setLatLng([lat,lng]); }
+    else { riderMarker=L.marker([lat,lng],{icon:ri}).addTo(deliveryMap).bindPopup('Delivery Rider'); deliveryMap.setView([lat,lng],14); }
+}
+
+function closeDeliveryMap(){
+    document.getElementById('deliveryMapOverlay').classList.remove('open');
+    document.body.style.overflow='';
+    if(deliveryWatch){ clearInterval(deliveryWatch); deliveryWatch=null; }
+    riderMarker=null; destMarker=null;
+}
+
+document.getElementById('deliveryMapOverlay').addEventListener('click',function(e){ if(e.target===this) closeDeliveryMap(); });
+</script>
+
+{% endblock %}

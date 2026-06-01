@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Employee Panel | Fusion Feast{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employee.css') }}">
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Flash Toasts (server-side messages) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="toast-container" id="flashToasts">
+    {% for category, message in messages %}
+    <div class="toast {{ category }}">
+        <div class="t-icon">
+            {% if category == 'success' %}✅
+            {% elif category in ['error','danger'] %}❌
+            {% elif category == 'warning' %}⚠️
+            {% else %}🔔{% endif %}
+        </div>
+        <div class="t-content">
+            <div class="t-title">
+                {% if category == 'success' %}Success
+                {% elif category in ['error','danger'] %}Error
+                {% elif category == 'warning' %}Warning
+                {% else %}Notice{% endif %}
+            </div>
+            <div class="t-body">{{ message }}</div>
+        </div>
+        <button class="t-close" onclick="this.closest('.toast').remove()">✕</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<button class="hamburger" id="hamburger" onclick="openSidebar()">☰</button>
+
+<div class="employee-layout">
+    <div class="employee-sidebar" id="sidebar">
+
+        <div class="sidebar-brand-area">
+            <div class="sidebar-brand-name">🍽 Fusion Feast</div>
+            <div class="sidebar-brand-sub">Employee Panel</div>
+        </div>
+
+        <div class="employee-info">
+            <div class="employee-photo">
+                <img src="{{ url_for('employee_photo', user_id=session['user_id']) }}"
+                     class="sidebar-photo"
+                     onerror="this.src='{{ url_for('static', filename='images/defaultprof.png') }}'">
+            </div>
+            <div class="employee-name">{{ session['name'] }}</div>
+            <div class="employee-role {{ session.get('employee_type','').lower().replace(' ','') }}">
+                {{ session.get('employee_type', 'Employee') }}
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            {% set etype = session.get('employee_type', '') %}
+
+            {% if etype == 'Cook' %}
+            <li><a href="/cook/dashboard"       class="{% if request.endpoint == 'cook_dashboard' %}active{% endif %}"><span class="menu-icon">🏠</span> Dashboard</a></li>
+            <li><a href="/cook/assigned-orders" class="{% if request.endpoint == 'cook_assigned_orders' %}active{% endif %}"><span class="menu-icon">👨‍🍳</span> My Orders</a></li>
+            <li><a href="/employee/profile"     class="{% if request.endpoint == 'employee_profile' %}active{% endif %}"><span class="menu-icon">✏️</span> Edit Profile</a></li>
+
+            {% elif etype == 'Delivery Boy' %}
+            <li><a href="/delivery/dashboard"        class="{% if request.endpoint == 'delivery_dashboard' %}active{% endif %}"><span class="menu-icon">🏠</span> Dashboard</a></li>
+            <li><a href="/delivery/assigned-orders"  class="{% if request.endpoint == 'delivery_assigned_orders' %}active{% endif %}"><span class="menu-icon">🛵</span> My Deliveries</a></li>
+            <li><a href="/employee/profile"          class="{% if request.endpoint == 'employee_profile' %}active{% endif %}"><span class="menu-icon">✏️</span> Edit Profile</a></li>
+
+            {% elif etype == 'Waiter' %}
+            <li><a href="/waiter/dashboard"        class="{% if request.endpoint == 'waiter_dashboard' %}active{% endif %}"><span class="menu-icon">🏠</span> Dashboard</a></li>
+            <li><a href="/waiter/assigned-orders"  class="{% if request.endpoint == 'waiter_assigned_orders' %}active{% endif %}"><span class="menu-icon">🪑</span> My Tables</a></li>
+            <li><a href="/employee/profile"        class="{% if request.endpoint == 'employee_profile' %}active{% endif %}"><span class="menu-icon">✏️</span> Edit Profile</a></li>
+
+            {% else %}
+            <li><a href="/employee/dashboard"><span class="menu-icon">🏠</span> Dashboard</a></li>
+            <li><a href="/employee/assigned-orders"><span class="menu-icon">📦</span> Assigned Orders</a></li>
+            <li><a href="/employee/profile"><span class="menu-icon">✏️</span> Edit Profile</a></li>
+            {% endif %}
+        </ul>
+
+        <a href="/logout" class="logout-btn">🚪 &nbsp;Logout</a>
+    </div>
+
+    <div class="employee-content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script>
+/* Auto-dismiss flash toasts */
+(function() {
+    const container = document.getElementById('flashToasts');
+    if (!container) return;
+    container.querySelectorAll('.toast').forEach((t, i) => {
+        setTimeout(() => {
+            t.style.opacity = '0';
+            t.style.transform = 'translateX(40px) scale(0.95)';
+            setTimeout(() => { t.remove(); if (!container.children.length) container.remove(); }, 420);
+        }, 4000 + i * 400);
+    });
+})();
+
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

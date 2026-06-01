@@ -1,0 +1,149 @@
+{% extends "User/user_base.html" %}
+{% block title %}Order History | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<style>
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:0.25s ease; z-index:9999; }
+.modal.active { opacity:1; pointer-events:auto; }
+.modal-content { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; width:95%; max-width:500px; transform:translateY(24px); transition:0.25s ease; }
+.modal.active .modal-content { transform:translateY(0); }
+.modal-content h2 { font-family:var(--font-head); font-size:1.2rem; font-weight:700; color:var(--text); margin-bottom:14px; }
+</style>
+
+<div class="page-title">📋 Order History</div>
+<p style="font-size:0.85rem; color:var(--text-sub); margin-top:-20px; margin-bottom:24px;">All your orders in one place</p>
+
+{% if orders %}
+{% set total_orders = orders|length %}
+{% set orders_in_cycle = total_orders % 10 %}
+<div class="discount-note fade-in">
+    🎁 <strong>Loyalty Reward:</strong> You've placed {{ total_orders }} orders total.
+    {% if orders_in_cycle == 0 and total_orders > 0 %}
+        Your next order gets <strong>30% OFF!</strong>
+    {% else %}
+        {{ 10 - orders_in_cycle }} more order{{ 's' if (10 - orders_in_cycle) != 1 else '' }} to earn your next 30% discount!
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="filters fade-in">
+    <button class="filter-btn active" onclick="filterOrders('all', this)">All</button>
+    <button class="filter-btn" onclick="filterOrders('Pending', this)">Pending</button>
+    <button class="filter-btn" onclick="filterOrders('Preparing', this)">Preparing</button>
+    <button class="filter-btn" onclick="filterOrders('Delivering', this)">Delivering</button>
+    <button class="filter-btn" onclick="filterOrders('Delivered', this)">Delivered</button>
+    <button class="filter-btn" onclick="filterOrders('Cancelled', this)">Cancelled</button>
+</div>
+
+<!-- Order Details Modal -->
+<div id="orderDetailsModal" class="modal" onclick="outsideClick(event)">
+    <div class="modal-content">
+        <h2>🧾 Order Details</h2>
+        <div id="orderDetailsContent"></div>
+        <div style="margin-top:16px; text-align:right;">
+            <button class="btn-cancel" onclick="closeOrderModal()">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="ordersList" style="display:flex; flex-direction:column; gap:14px;">
+{% if orders %}
+    {% for order in orders %}
+    <div class="order-card fade-in" data-status="{{ order.status }}">
+        <div class="order-top">
+            <div>
+                <div class="order-id">Order <span>#{{ order.order_id }}</span></div>
+                <div style="margin-top:6px;">
+                    <span class="status-pill {{ order.status }}">
+                        <span class="status-dot {% if order.status in ['Pending','Preparing','Delivering'] %}pulse{% endif %}"></span>
+                        {{ order.status }}
+                    </span>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div class="order-amount">₹{{ "%.0f"|format(order.total_amount) }}</div>
+                {% if loop.index % 10 == 0 %}
+                <div style="font-size:0.7rem; color:var(--purple); font-weight:700; margin-top:4px;">🎁 30% Discount Applied</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="order-meta">
+            {% if order.order_type %}<div class="order-meta-item">{{ order.order_type }}</div>{% endif %}
+            {% if order.payment_method %}<div class="order-meta-item">{{ order.payment_method }}</div>{% endif %}
+            {% if order.order_date %}<div class="order-meta-item">{{ order.order_date.strftime('%d %b %Y, %I:%M %p') }}</div>{% endif %}
+        </div>
+
+        {% if order.status == "Delivering" and order.delivery_otp %}
+        <div class="otp-box">
+            <div>
+                <div class="otp-label">🚴 Delivery OTP</div>
+                <div class="otp-description">Share this with your rider to confirm delivery</div>
+            </div>
+            <div class="otp-digits">
+                {% for digit in order.delivery_otp|string %}
+                <div class="otp-digit">{{ digit }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="order-actions">
+            <button class="btn-secondary" style="font-size:0.78rem;" onclick="openOrderDetails({{ order.order_id }})">View Details</button>
+            {% if order.status == "Pending" %}
+            <a href="/cancel_order/{{ order.order_id }}" class="btn-cancel" style="font-size:0.78rem;"
+               onclick="return confirm('Cancel this order?')">Cancel Order</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="empty-state glass-card">
+    <div class="empty-icon">🛒</div>
+    <p>No orders yet. Start ordering!</p>
+    <a href="{{ url_for('order_online') }}" class="btn" style="margin-top:18px;">Browse Menu</a>
+</div>
+{% endif %}
+</div>
+
+<div id="noResults" class="no-results" style="display:none;">No orders match this filter.</div>
+
+<script>
+function filterOrders(status, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const cards=document.querySelectorAll('.order-card');
+    let found=0;
+    cards.forEach(c=>{
+        if(status==='all'||c.dataset.status===status){c.style.display='';found++;}
+        else c.style.display='none';
+    });
+    document.getElementById('noResults').style.display=found===0?'block':'none';
+}
+
+function openOrderDetails(orderId) {
+    fetch(`/get_order_details/${orderId}`)
+    .then(res=>res.json())
+    .then(data=>{
+        let html='';
+        data.items.forEach(item=>{
+            html+=`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+                <img src="/static/uploads/${item.image||'default.jpg'}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;border:1px solid var(--border);">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.9rem;color:var(--text);">${item.item_name}</div>
+                    <div style="font-size:0.75rem;color:var(--text-sub);margin-top:2px;">Qty: ${item.quantity}</div>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">${data.order_date}</div>
+            </div>`;
+        });
+        document.getElementById("orderDetailsContent").innerHTML=html;
+        document.getElementById("orderDetailsModal").classList.add("active");
+    }).catch(err=>alert("Error: "+err));
+}
+
+function closeOrderModal() { document.getElementById("orderDetailsModal").classList.remove("active"); }
+function outsideClick(e) { if(e.target.id==="orderDetailsModal") closeOrderModal(); }
+</script>
+
+{% endblock %}

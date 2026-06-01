@@ -1,0 +1,80 @@
+{% extends "Employee/base_employee.html" %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+
+<!-- ========== HEADER BANNER ========== -->
+<div class="dashboard-header" style="margin-bottom:30px;">
+    <div>
+        <h2>✏️ Edit Profile</h2>
+        <p>Update your personal information and photo</p>
+    </div>
+</div>
+
+<!-- ========== PROFILE FORM CARD ========== -->
+<div class="profile-card advanced">
+
+    <!-- Top Section -->
+    <div class="profile-top">
+        <div class="profile-image-section">
+            <div class="image-wrapper">
+                <img src="{{ url_for('employee_photo', user_id=employee.user_id) }}"
+                     class="profile-image"
+                     id="profilePreview"
+                     onerror="this.src='{{ url_for('static', filename='images/defaultprof.png') }}'">
+            </div>
+
+            <label class="photo-label" for="photoInput">
+                📷 Change Photo
+            </label>
+
+            <input type="file" name="photo" id="photoInput" accept="image/*"
+                   style="display:none;" onchange="previewPhoto(event)">
+        </div>
+
+        <div class="profile-info">
+            <h3>{{ employee.name }}</h3>
+            <p>{{ employee.email }}</p>
+        </div>
+    </div>
+
+    <!-- FORM -->
+    <form method="POST" enctype="multipart/form-data" class="profile-form">
+
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" name="name" value="{{ employee.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email" value="{{ employee.email }}" readonly>
+        </div>
+
+        <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" name="phone" value="{{ employee.phone }}">
+        </div>
+
+        <button type="submit" class="save-btn">
+            💾 Save Changes
+        </button>
+
+    </form>
+</div>
+
+<script>
+function previewPhoto(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+            document.getElementById('profilePreview').src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+
+{% endblock %}

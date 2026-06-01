@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Register | Fusion Feast</title>
+<link rel="stylesheet" href="/static/css/login.css">
+
+<style>
+
+/* ===== Location Box ===== */
+.location-display {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f9f9f9;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* ===== Modal ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+/* ===== Modal Content ===== */
+.modal-content {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    width: 350px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {transform: scale(0.9); opacity: 0;}
+    to {transform: scale(1); opacity: 1;}
+}
+
+/* ===== Buttons ===== */
+.location-btn {
+    width: 100%;
+    padding: 10px;
+    background: #7c3aed;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.save-btn {
+    width: 100%;
+    padding: 10px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.close-btn {
+    width: 100%;
+    padding: 10px;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="login-container">
+
+<!-- LEFT SIDE -->
+<div class="login-left">
+    <div class="brand-box">
+        <img src="/static/images/logo.jpg" alt="Logo">
+        <h1>Fusion Feast</h1>
+        <p>Where Flavors Unite</p>
+    </div>
+</div>
+
+<!-- RIGHT SIDE -->
+<div class="login-right">
+<div class="form-box">
+
+<h2>Create Customer Account</h2>
+
+<form method="POST" action="/register">
+
+<label>Full Name</label>
+<input type="text" name="name" required>
+
+<label>Email</label>
+<input type="email" name="email" required>
+
+<label>Phone Number</label>
+<input type="text" name="phone" required>
+
+<!-- ===== LOCATION SELECTOR ===== -->
+
+<label>Delivery Location</label>
+
+<div class="location-display" onclick="openLocationModal()">
+    <span id="selected-address">Click to select your location</span>
+</div>
+
+<!-- Hidden fields -->
+<input type="hidden" name="latitude" id="latitude">
+<input type="hidden" name="longitude" id="longitude">
+<input type="hidden" name="address_line" id="address_line">
+<input type="hidden" name="city" id="city">
+<input type="hidden" name="state" id="state">
+<input type="hidden" name="pincode" id="pincode">
+
+<!-- ===== PASSWORD ===== -->
+
+<label>Password</label>
+<input type="password" name="password" required>
+
+<label>Confirm Password</label>
+<input type="password" name="confirm_password" required>
+
+<button type="submit">Register</button>
+
+</form>
+
+<div class="register-link">
+    <p>Already have an account?</p>
+    <a href="/login">Login Here</a>
+</div>
+
+<br>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<p class="error">{{ message }}</p>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+</div>
+</div>
+
+</div>
+
+<!-- ===== MODAL ===== -->
+
+<div id="locationModal" class="modal">
+<div class="modal-content">
+
+<h3>Select Delivery Location</h3>
+
+<p style="font-size:12px;color:gray;">
+Using GPS gives faster and accurate delivery 🚀
+</p>
+
+<button onclick="getLocation()" class="location-btn">
+    📍 Use Current Location
+</button>
+
+<p id="location-status"></p>
+
+<hr>
+
+<h4>Enter Address Manually</h4>
+
+<input type="text" id="m_address_line" placeholder="House / Area">
+<input type="text" id="m_city" placeholder="City">
+<input type="text" id="m_state" placeholder="State">
+<input type="text" id="m_pincode" placeholder="PIN Code">
+
+<button onclick="saveAddress()" class="save-btn">Save Address</button>
+<button onclick="closeLocationModal()" class="close-btn">Cancel</button>
+
+</div>
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+
+<script>
+
+// Open Modal
+function openLocationModal(){
+    document.getElementById("locationModal").style.display = "flex";
+}
+
+// Close Modal
+function closeLocationModal(){
+    document.getElementById("locationModal").style.display = "none";
+}
+
+// GPS Location
+function getLocation() {
+    const status = document.getElementById("location-status");
+
+    if (navigator.geolocation) {
+        status.innerHTML = "Fetching location...";
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+
+            document.getElementById("latitude").value = position.coords.latitude;
+            document.getElementById("longitude").value = position.coords.longitude;
+
+            // Clear manual address (IMPORTANT)
+            document.getElementById("address_line").value = "";
+            document.getElementById("city").value = "";
+            document.getElementById("state").value = "";
+            document.getElementById("pincode").value = "";
+
+            document.getElementById("selected-address").innerHTML =
+                "📍 Location selected (GPS)";
+
+            status.innerHTML = "✅ Location captured!";
+
+            closeLocationModal();
+        },
+        function(){
+            status.innerHTML = "❌ Please allow location access!";
+        });
+    }
+}
+
+// Save manual address
+function saveAddress(){
+
+    let addr = document.getElementById("m_address_line").value;
+    let city = document.getElementById("m_city").value;
+    let state = document.getElementById("m_state").value;
+    let pin = document.getElementById("m_pincode").value;
+
+    if(!addr || !city || !state || !pin){
+        alert("Please fill all address fields");
+        return;
+    }
+
+    // Save address
+    document.getElementById("address_line").value = addr;
+    document.getElementById("city").value = city;
+    document.getElementById("state").value = state;
+    document.getElementById("pincode").value = pin;
+
+    // Clear GPS (IMPORTANT)
+    document.getElementById("latitude").value = "";
+    document.getElementById("longitude").value = "";
+
+    document.getElementById("selected-address").innerHTML =
+        addr + ", " + city + ", " + state + " - " + pin;
+
+    closeLocationModal();
+}
+
+</script>
+
+</body>
+</html>

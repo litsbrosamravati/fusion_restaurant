@@ -1,0 +1,174 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}Delivery Dashboard | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<!-- GPS Banner -->
+<div id="gpsBanner" class="gps-banner off">
+    <div class="gps-indicator" id="gpsIndicator"></div>
+    <div>
+        <div id="gpsTitle" style="font-weight:800;">Initializing GPS…</div>
+        <div id="gpsCoords" style="font-size:11px;opacity:0.75;margin-top:1px;">Requesting location access</div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="dashboard-header">
+    <div>
+        <h2>Welcome back, {{ session.get('name') }} 👋</h2>
+        <p>Shift: {{ session.get('shift','—') }} &nbsp;|&nbsp; <span class="online-dot"></span> Online</p>
+    </div>
+
+    <!-- Notification Bell -->
+    <div class="notif-wrapper">
+        <button class="notif-trigger" id="notifBtn">
+            🔔
+            {% if notifications %}
+            <span class="notif-count">{{ notifications|length }}</span>
+            {% endif %}
+        </button>
+        <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel-header">
+                <span>🔔 Notifications</span>
+                {% if notifications %}
+                <button class="mark-read" onclick="clearNotifs()">Mark all read</button>
+                {% endif %}
+            </div>
+            <div class="notif-list" id="notifList">
+                {% if notifications %}
+                    {% for note in notifications %}
+                    <div class="notif-item">
+                        <div class="ni-icon">📦</div>
+                        <div>
+                            <div class="ni-msg">{{ note.message }}</div>
+                            <div class="ni-time">{{ note.time }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="notif-empty">🎉 All caught up!</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card pending">
+        <div class="stat-top"><div class="stat-icon">📦</div><span class="stat-lbl">Ready to Pick</span></div>
+        <h2>{{ pending_orders }}</h2>
+    </div>
+    <div class="stat-card picked">
+        <div class="stat-top"><div class="stat-icon">🛵</div><span class="stat-lbl">Picked Up</span></div>
+        <h2>{{ picked_orders }}</h2>
+    </div>
+    <div class="stat-card delivered">
+        <div class="stat-top"><div class="stat-icon">✅</div><span class="stat-lbl">Delivered Today</span></div>
+        <h2>{{ delivered_today }}</h2>
+    </div>
+    <div class="stat-card total">
+        <div class="stat-top"><div class="stat-icon">📊</div><span class="stat-lbl">Total Today</span></div>
+        <h2>{{ total_orders_today }}</h2>
+    </div>
+</div>
+
+<!-- Deliveries Table — no Map column -->
+<div class="table-section">
+    <div class="ts-head">
+        <h3>🛵 My Delivery Orders</h3>
+        {% if deliveries %}
+        <span class="ts-count">{{ deliveries|length }} order{{ 's' if deliveries|length != 1 else '' }}</span>
+        {% endif %}
+    </div>
+
+    {% if deliveries %}
+    <div style="overflow-x:auto;">
+    <table class="orders-table">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Items</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for task in deliveries %}
+        <tr>
+            <td style="font-weight:800;color:var(--orange);">#{{ task.order_id }}</td>
+            <td style="font-weight:700;color:var(--text-h);">{{ task.customer_name }}</td>
+            <td style="color:var(--text-s);">{{ task.phone }}</td>
+            <td style="font-size:12.5px;color:var(--text-s);max-width:160px;">{{ task.delivery_address }}</td>
+            <td style="font-size:12px;color:var(--text-p);">
+                {% if task["items"] %}
+                    {% for item in task["items"] %}{{ item.item_name }} ×{{ item.quantity }}<br>{% endfor %}
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                <span class="status-pill {{ task.status|lower }}">{{ task.status }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="no-orders">
+        <span class="empty-icon">📦</span>
+        No deliveries assigned yet.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+/* Continuous GPS sharing */
+(function() {
+    const banner = document.getElementById('gpsBanner');
+    const title  = document.getElementById('gpsTitle');
+    const coords = document.getElementById('gpsCoords');
+    if (!navigator.geolocation) { title.textContent = 'GPS not supported'; return; }
+
+    navigator.geolocation.watchPosition(pos => {
+        const lat = pos.coords.latitude.toFixed(5);
+        const lng = pos.coords.longitude.toFixed(5);
+        banner.className = 'gps-banner on';
+        title.textContent = '📡 Location sharing active';
+        coords.textContent = `Lat: ${lat}, Lng: ${lng}`;
+        fetch('/api/update-rider-location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: parseFloat(lat), lng: parseFloat(lng) })
+        }).catch(() => {});
+    }, () => {
+        banner.className = 'gps-banner off';
+        title.textContent = '❌ Location access denied';
+        coords.textContent = 'Enable location in browser settings';
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+})();
+
+/* Notification bell */
+const notifBtn   = document.getElementById('notifBtn');
+const notifPanel = document.getElementById('notifPanel');
+
+notifBtn.addEventListener('click', e => { e.stopPropagation(); notifPanel.classList.toggle('open'); });
+window.addEventListener('click', e => {
+    if (!notifBtn.contains(e.target) && !notifPanel.contains(e.target)) notifPanel.classList.remove('open');
+});
+
+function clearNotifs() {
+    document.getElementById('notifList').innerHTML = '<div class="notif-empty">🎉 All caught up!</div>';
+    const cnt = notifBtn.querySelector('.notif-count');
+    if (cnt) cnt.remove();
+}
+
+/* Animate stat numbers */
+document.querySelectorAll('.stat-card h2').forEach(el => {
+    const target = +el.textContent;
+    let n = 0; const step = Math.max(1, target / 40);
+    const iv = setInterval(() => { n = Math.min(n+step, target); el.textContent = Math.ceil(n); if(n>=target) clearInterval(iv); }, 22);
+});
+</script>
+{% endblock %}

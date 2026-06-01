@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Payment | Fusion Feast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
+</head>
+<body>
+
+<div class="pay-page-wrap">
+    <div class="pay-card fade-in">
+        <div style="font-size:2.5rem; margin-bottom:14px;">⏳</div>
+        <h2>Processing Payment</h2>
+        <p>Your secure Razorpay checkout is opening…</p>
+        <div class="pay-amount" style="font-size:1.3rem; color:var(--text-sub);">
+            Please wait
+        </div>
+    </div>
+</div>
+
+<form id="paymentForm" action="/verify_order_payment" method="POST">
+    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+    <input type="hidden" name="razorpay_order_id"   value="{{ razorpay_order_id }}">
+    <input type="hidden" name="razorpay_signature"  id="razorpay_signature">
+</form>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var rzp=new Razorpay({
+    key:         "{{ razorpay_key }}",
+    amount:      "{{ amount }}",
+    currency:    "INR",
+    name:        "Fusion Feast",
+    description: "Food Order Payment",
+    order_id:    "{{ razorpay_order_id }}",
+    theme:       { color: "#e8843a" },
+    handler: function(response){
+        document.getElementById("razorpay_payment_id").value=response.razorpay_payment_id;
+        document.getElementById("razorpay_signature").value =response.razorpay_signature;
+        document.getElementById("paymentForm").submit();
+    },
+    modal: {
+        ondismiss: function(){ window.location.href="/payment_cancelled?source=single"; }
+    }
+});
+rzp.open();
+</script>
+
+</body>
+</html>

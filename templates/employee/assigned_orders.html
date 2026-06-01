@@ -1,0 +1,36 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}Assigned Orders{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/employee.css') }}">
+
+<div class="dashboard-section">
+    <h3>📦 Assigned Orders</h3>
+    <div class="orders-cards">
+        {% if deliveries %}
+            {% for task in deliveries %}
+            <div class="order-card">
+                <div class="order-header">
+                    <h4>Order #{{ task.order_id }}</h4>
+                    <span class="status {{ task.status | lower }}">{{ task.status }}</span>
+                </div>
+                <p><strong>Customer:</strong> {{ task.customer_name }}</p>
+                <p><strong>Phone:</strong> {{ task.phone }}</p>
+                <p><strong>Address:</strong> {{ task.address }}</p>
+                <p><strong>Items:</strong></p>
+                <ul>
+                    {% for item in task.items %}
+                    <li>{{ item.item_name }} x{{ item.quantity }}</li>
+                    {% endfor %}
+                </ul>
+                <a target="_blank" href="https://www.google.com/maps/search/?api=1&query={{ task.address }}" class="map-link">View on Map</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No assigned deliveries currently.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

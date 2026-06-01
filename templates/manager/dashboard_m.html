@@ -1,0 +1,142 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Manager Dashboard{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Dashboard Overview</h1>
+
+<!-- ================= SUMMARY CARDS ================= -->
+<div class="cards">
+    <div class="card">
+        <h3>Total Orders</h3>
+        <p>{{ total_orders }}</p>
+    </div>
+    <div class="card">
+        <h3>Total Revenue</h3>
+        <p>₹{{ total_revenue }}</p>
+    </div>
+    <div class="card">
+        <h3>Total Employees</h3>
+        <p>{{ total_employees }}</p>
+    </div>
+    <div class="card">
+        <h3>Pending Orders</h3>
+        <p>{{ pending_orders }}</p>
+    </div>
+    <div class="card">
+        <h3>Completed Orders</h3>
+        <p>{{ completed_orders }}</p>
+    </div>
+
+</div>
+
+<!-- ================= REVENUE CHART ================= -->
+<div class="section">
+    <h2 class="section-title">📈 Revenue (Last 7 Days)</h2>
+    <canvas id="revenueChart" height="90"></canvas>
+</div>
+
+<!-- ================= RECENT ORDERS ================= -->
+<div class="section">
+    <h2 class="section-title">🧾 Recent Orders</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in recent_orders %}
+            <tr>
+                <td>
+                    <span style="font-weight:800;color:var(--orange);">#{{ order.id }}</span>
+                </td>
+                <td><strong style="color:var(--text-h);">{{ order.customer_name }}</strong></td>
+                <td>
+                    <span class="badge {% if order.status == 'Pending' %}pending{% elif order.status == 'Completed' %}completed{% else %}cancelled{% endif %}">
+                        {{ order.status }}
+                    </span>
+                </td>
+                <td style="font-weight:700;color:var(--text-h);">₹{{ order.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ================= QUICK ACTIONS ================= -->
+<div class="section">
+    <h2 class="section-title">⚡ Quick Actions</h2>
+    <div class="quick-actions">
+        <button onclick="location.href='/manager/menu'">🍽️ Add Menu Item</button>
+        <button onclick="location.href='/manager/manage-employees'">👥 Add Employee</button>
+        <button onclick="location.href='/manager/orders'">📦 View Orders</button>
+        <button onclick="location.href='/manager/bookings'">📅 View Bookings</button>
+    </div>
+</div>
+
+<!-- ================= ALERTS ================= -->
+<div class="section">
+    <h2 class="section-title">🔔 Alerts</h2>
+    <div class="alert">⚠️ {{ low_stock_items }} items are low in stock.</div>
+    <div class="alert">📌 {{ pending_orders }} orders are pending.</div>
+</div>
+
+<script>
+const ctx = document.getElementById('revenueChart');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_labels|safe }},
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: {{ revenue_data|safe }},
+            borderColor: '#ff6600',
+            backgroundColor: 'rgba(255,102,0,0.08)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#ff6600',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#6b7280',
+                    font: { family: 'Nunito', size: 13, weight: '600' }
+                }
+            },
+            tooltip: {
+                backgroundColor: '#1a1e2a',
+                borderColor: 'rgba(255,102,0,0.3)',
+                borderWidth: 1,
+                titleColor: '#ff6600',
+                bodyColor: '#e5e7eb',
+                padding: 12,
+                titleFont: { family: 'Nunito', size: 13, weight: '700' },
+                bodyFont:  { family: 'Nunito', size: 13 },
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#9aa0ad', font: { family: 'Nunito', weight: '600' } },
+                grid:  { color: 'rgba(0,0,0,0.05)' }
+            },
+            y: {
+                ticks: { color: '#9aa0ad', font: { family: 'Nunito', weight: '600' } },
+                grid:  { color: 'rgba(0,0,0,0.05)' }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

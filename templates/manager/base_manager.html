@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Manager Panel{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+
+    <div class="manager-name">
+        <strong>{{ session.get('name', 'Manager') }}</strong>
+    </div>
+
+    <a href="{{ url_for('manager_dashboard') }}"
+       class="{% if active_page == 'dashboard' %}active{% endif %}">
+        Dashboard
+    </a>
+
+    <a href="{{ url_for('manager_manage_employees') }}"
+       class="{% if active_page == 'employees' %}active{% endif %}">
+        Manage Employees
+    </a>
+
+    <a href="{{ url_for('manager_categories') }}"
+       class="{% if active_page == 'categories' %}active{% endif %}">
+        Categories
+    </a>
+
+    <a href="{{ url_for('manager_menu') }}"
+       class="{% if active_page == 'menu' %}active{% endif %}">
+        Menu
+    </a>
+
+    <a href="{{ url_for('manager_orders') }}"
+       class="{% if active_page == 'orders' %}active{% endif %}">
+        Orders
+    </a>
+
+    <a href="{{ url_for('manager_manage_tables') }}"
+       class="{% if active_page == 'tables' %}active{% endif %}">
+        Manage Tables
+    </a>
+
+    <a href="{{ url_for('manager_bookings') }}"
+       class="{% if active_page == 'bookings' %}active{% endif %}">
+        Bookings
+    </a>
+
+    <a href="{{ url_for('logout') }}" class="btn btn-danger" style="margin-top:auto;">
+        🚪&nbsp; Logout
+    </a>
+
+</div>
+
+<!-- ================= MAIN ================= -->
+<div class="main">
+    {% block content %}{% endblock %}
+</div>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

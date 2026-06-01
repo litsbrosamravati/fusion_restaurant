@@ -1,0 +1,48 @@
+<!-- templates/receipt.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receipt #{{ order.order_id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h2 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table, th, td { border: 1px solid #333; }
+        th, td { padding: 8px; text-align: left; }
+        .total { text-align: right; font-weight: bold; margin-top: 20px; }
+        .btns { margin-top: 20px; }
+        .btns a { padding: 8px 12px; background: #28a745; color: white; text-decoration: none; margin-right: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Restaurant Receipt</h2>
+    <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+    <p><strong>Name:</strong> {{ order.customer_name }}</p>
+    <p><strong>Phone:</strong> {{ order.phone }}</p>
+    <p><strong>Email:</strong> {{ order.email }}</p>
+
+    <table>
+        <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th>Total</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>₹ {{ item.price }}</td>
+            <td>₹ {{ item.price * item.quantity }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <p class="total">Total: ₹ {{ order.total_amount }} | Discount: ₹ {{ order.discount }} | Final: ₹ {{ order.final_amount }}</p>
+
+    <div class="btns">
+        <a href="/download_receipt/{{ order.order_id }}">Download PDF</a>
+        <a href="#" onclick="window.print()">Print Receipt</a>
+    </div>
+</body>
+</html>

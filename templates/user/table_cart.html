@@ -1,0 +1,77 @@
+{% extends "User/user_base.html" %}
+{% block title %}Table Cart | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="page-title">🛒 Your Table Cart</div>
+
+{% if cart_items %}
+
+<div class="glass-card fade-in" style="padding:0; overflow:hidden;">
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        {% set total = namespace(value=0) %}
+
+        {% for item in cart_items %}
+        {% set item_total = item.price * item.quantity %}
+        {% set total.value = total.value + item_total %}
+
+        <tr>
+            <td><span class="cart-item-name">{{ item.item_name }}</span></td>
+            <td style="color:var(--text-sub);">₹{{ item.price }}</td>
+            <td>
+                <div class="qty-box">
+                    <form method="POST" action="/update-table-cart/{{ item.cart_id }}">
+                        <input type="hidden" name="action" value="decrease">
+                        <button type="submit" class="qty-btn">−</button>
+                    </form>
+                    <span class="qty-value">{{ item.quantity }}</span>
+                    <form method="POST" action="/update-table-cart/{{ item.cart_id }}">
+                        <input type="hidden" name="action" value="increase">
+                        <button type="submit" class="qty-btn">+</button>
+                    </form>
+                </div>
+            </td>
+            <td style="color:var(--accent); font-weight:700;">₹{{ item_total }}</td>
+            <td>
+                <form method="POST" action="/remove-table-cart/{{ item.cart_id }}">
+                    <button type="submit" class="btn-cancel" style="font-size:0.75rem; padding:6px 12px;">Remove</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+<div class="cart-summary fade-in">
+    <div>
+        <span class="cart-total-label">Table Total</span>
+    </div>
+    <div class="cart-total-amount">₹{{ total.value }}</div>
+    <a href="/pay-table-order/{{ table_id }}" class="btn-success">Pay & Place Order</a>
+    <a href="/order-from-table/{{ booking_id }}" class="btn-secondary">← Back to Menu</a>
+</div>
+
+{% else %}
+
+<div class="glass-card empty-state fade-in">
+    <div class="empty-icon">🛒</div>
+    <p>Your table cart is empty.</p>
+    <a href="/order-from-table/{{ booking_id }}" class="btn" style="margin-top:18px;">Browse Menu</a>
+</div>
+
+{% endif %}
+
+{% endblock %}

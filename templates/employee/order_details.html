@@ -1,0 +1,66 @@
+{% extends "Employee/base_employee.html" %}
+
+{% block title %}Assigned Orders{% endblock %}
+
+{% block content %}
+
+<h2>Assigned Orders</h2>
+
+<table class="task-table">
+
+<tr>
+<th>Order ID</th>
+<th>Customer</th>
+<th>Phone</th>
+
+{% if role == "Delivery" %}
+<th>Location</th>
+{% endif %}
+
+{% if role == "Waiter" %}
+<th>Table</th>
+{% endif %}
+
+<th>Date</th>
+<th>Action</th>
+</tr>
+
+{% for order in orders %}
+
+<tr>
+
+<td>#{{ order.order_id }}</td>
+<td>{{ order.customer_name }}</td>
+<td>{{ order.phone }}</td>
+
+{% if role == "Delivery" %}
+
+<td>
+<a href="https://www.google.com/maps?q={{order.latitude}},{{order.longitude}}" target="_blank">
+View Location
+</a>
+</td>
+
+{% endif %}
+
+{% if role == "Waiter" %}
+
+<td>{{ order.table_id }}</td>
+
+{% endif %}
+
+<td>{{ order.order_date }}</td>
+
+<td>
+<a href="/employee/order-details/{{order.order_id}}">
+View
+</a>
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

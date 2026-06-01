@@ -1,0 +1,67 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}Cook Dashboard{% endblock %}
+
+{% block content %}
+
+<h2>👨‍🍳 Cook Dashboard</h2>
+
+<!-- PROFILE -->
+<div class="profile-card">
+
+<h3>My Profile</h3>
+
+<form method="POST">
+
+<input type="text" value="{{employee.user_id}}" readonly>
+
+<input type="text" name="name" value="{{employee.name}}">
+
+<input type="email" name="email" value="{{employee.email}}">
+
+<input type="text" name="phone" value="{{employee.phone}}">
+
+<input type="text" value="₹ {{employee.salary}}" readonly>
+
+<button type="submit">Update</button>
+
+</form>
+
+</div>
+
+
+
+<h3>Assigned Orders</h3>
+
+{% if tasks %}
+
+<table class="task-table">
+<tr>
+<th>Order ID</th>
+<th>Item</th>
+<th>Quantity</th>
+<th>Status</th>
+</tr>
+
+{% for task in tasks %}
+
+<tr>
+<td>{{task.order_id}}</td>
+<td>{{task.item_name}}</td>
+<td>{{task.quantity}}</td>
+<td><span class="status cooking">{{task.status}}</span></td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="no-task">
+<span>📭</span>
+No Task Assigned
+</div>
+
+{% endif %}
+
+{% endblock %}

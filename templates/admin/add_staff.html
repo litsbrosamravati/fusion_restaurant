@@ -1,0 +1,273 @@
+{% extends "admin/base_superadmin.html" %}
+{% block title %}Add Staff{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== FORM CARD ===== */
+.form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 36px 40px;
+    max-width: 870px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+    margin-left:150px;
+}
+
+.form-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--orange), var(--orange-light), transparent);
+}
+
+/* ===== SECTION LABEL ===== */
+.form-section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.form-section-label::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 15px;
+    background: var(--orange);
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* ===== FORM GRID ===== */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.full-width { grid-column: 1 / -1; }
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* ===== LABEL ===== */
+label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* ===== INPUTS ===== */
+input, select, textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    transition: var(--tr);
+    outline: none;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-soft);
+    background: #fff;
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+}
+
+textarea { resize: none; height: 90px; }
+
+/* ===== ROLE PILL ===== */
+#rolePill {
+    display: none;
+    margin-top: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--orange);
+    background: var(--orange-soft);
+    border: 1px solid rgba(255,102,0,0.2);
+    padding: 4px 13px;
+    border-radius: 20px;
+    width: fit-content;
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0 22px;
+}
+
+/* ===== SUBMIT ===== */
+.btn-submit {
+    margin-top: 26px;
+    padding: 13px 36px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-light));
+    border: flex;
+    border-radius: 10px;
+    color: #000;
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: var(--tr);
+    box-shadow: 0 4px 16px var(--orange-glow);
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 26px var(--orange-glow);
+}
+
+.btn-submit:active { transform: translateY(0); }
+
+@media (max-width: 680px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-card  { padding: 26px 20px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Add Manager / Employee</h1>
+
+<div class="form-card">
+    <form method="POST" autocomplete="off">
+
+        <!-- Basic Info -->
+        <div class="form-section-label">Basic Information</div>
+
+        <div class="form-grid">
+
+            <div class="field">
+                <label>Full Name</label>
+                <input type="text" name="name" placeholder="e.g. Ravi Sharma" required>
+            </div>
+
+            <div class="field">
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="email@example.com" required>
+            </div>
+
+            <div class="field">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <div class="field">
+                <label>Select Role</label>
+                <select name="role" id="roleSelect" required onchange="toggleEmployeeFields()">
+                    <option value="">— Select Role —</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Employee">Employee</option>
+                </select>
+                <span id="rolePill"></span>
+            </div>
+
+            <div class="field">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" placeholder="10-digit mobile number"
+                       pattern="[0-9]{10}" maxlength="10">
+            </div>
+
+            <div class="field">
+                <label>Monthly Salary (₹)</label>
+                <input type="number" name="salary" placeholder="e.g. 18000" min="0" required>
+            </div>
+
+        </div>
+
+        <!-- Employee-only section -->
+        <div id="employeeSection" style="display:none;">
+            <hr class="divider">
+            <div class="form-section-label">Employee Details</div>
+            <div class="form-grid">
+                <div class="field employee-fields">
+                    <label>Employee Type</label>
+                    <select name="employee_type">
+                        <option value="">— Select Type —</option>
+                        <option value="Cook">Cook</option>
+                        <option value="Waiter">Waiter</option>
+                        <option value="Delivery Boy">Delivery Boy</option>
+                    </select>
+                </div>
+                <div class="field employee-fields">
+                    <label>Shift</label>
+                    <select name="shift">
+                        <option value="">— Select Shift —</option>
+                        <option value="Morning">Morning</option>
+                        <option value="Afternoon">Afternoon</option>
+                        <option value="Night">Night</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional -->
+        <hr class="divider">
+        <div class="form-section-label">Additional Info</div>
+
+        <div class="field">
+            <label>Address</label>
+            <textarea name="address" placeholder="Full address (optional)"></textarea>
+        </div>
+
+        <div>
+            <button type="submit" class="btn-submit">➕ &nbsp;Add Staff Member</button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+function toggleEmployeeFields() {
+    const role    = document.getElementById("roleSelect").value;
+    const fields  = document.querySelectorAll(".employee-fields");
+    const section = document.getElementById("employeeSection");
+    const pill    = document.getElementById("rolePill");
+
+    if (role === "Employee") {
+        fields.forEach(f => f.style.display = "flex");
+        section.style.display = "block";
+        pill.textContent = "🔧 Employee — additional fields unlocked";
+        pill.style.display = "inline-block";
+    } else if (role === "Manager") {
+        fields.forEach(f => f.style.display = "none");
+        section.style.display = "none";
+        pill.textContent = "🛠 Manager role selected";
+        pill.style.display = "inline-block";
+    } else {
+        fields.forEach(f => f.style.display = "none");
+        section.style.display = "none";
+        pill.style.display = "none";
+    }
+}
+</script>
+
+{% endblock %}

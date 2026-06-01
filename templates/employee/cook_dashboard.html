@@ -1,0 +1,167 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}Cook Dashboard | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <div>
+        <h2>👨‍🍳 Cook Dashboard</h2>
+        <p>Manage kitchen orders — update status as you cook</p>
+    </div>
+    <div class="shift-badge">⏰ Shift: {{ current_shift }}</div>
+</div>
+
+<div class="cook-stats">
+    <div class="c-stat pending">
+        <div class="c-stat-top"><div class="c-stat-icon">⏳</div><span class="c-stat-lbl">Pending</span></div>
+        <h2>{{ pending_orders }}</h2>
+    </div>
+    <div class="c-stat cooking">
+        <div class="c-stat-top"><div class="c-stat-icon">🍳</div><span class="c-stat-lbl">Cooking</span></div>
+        <h2>{{ cooking_orders }}</h2>
+    </div>
+    <div class="c-stat ready">
+        <div class="c-stat-top"><div class="c-stat-icon">✅</div><span class="c-stat-lbl">Ready</span></div>
+        <h2>{{ ready_orders }}</h2>
+    </div>
+    <div class="c-stat completed">
+        <div class="c-stat-top"><div class="c-stat-icon">📦</div><span class="c-stat-lbl">Done Today</span></div>
+        <h2>{{ completed_today }}</h2>
+    </div>
+</div>
+
+<div class="orders-section">
+    <div class="os-head">
+        <h3>🔥 Active Kitchen Orders</h3>
+        <span class="live-badge" id="liveCount">Loading…</span>
+    </div>
+    <div id="liveOrdersWrap" style="overflow-x:auto;">
+        <div class="no-orders"><span class="empty-icon">⏳</span>Loading orders…</div>
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="info-card">
+        <h3>🔧 Kitchen Status</h3>
+        <div class="kstatus-grid">
+            <div class="ks-item"><span class="ks-lbl">Shift</span><span class="ks-val">{{ current_shift }}</span></div>
+            <div class="ks-item"><span class="ks-lbl">Station</span><span class="ks-val">{{ station }}</span></div>
+            <div class="ks-item"><span class="ks-lbl">Head Chef</span><span class="ks-val">{{ head_chef }}</span></div>
+            <div class="ks-item"><span class="ks-lbl">Queue</span><span class="ks-val" style="color:var(--yellow);">{{ pending_orders }} orders</span></div>
+        </div>
+    </div>
+    <div class="info-card">
+        <h3>🍽️ Today's Specials</h3>
+        <ul class="specials-list">
+            {% for dish in specials %}<li>{{ dish }}</li>{% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="activity-card">
+    <h3>📋 Recent Activity</h3>
+    <ul class="activity-list">
+        {% for log in activity_feed %}<li>{{ log }}</li>{% endfor %}
+    </ul>
+</div>
+
+<div class="notif-toast-container" id="cookToasts"></div>
+
+<script>
+function loadLiveOrders() {
+    fetch('/api/cook/live-orders')
+    .then(r => r.json())
+    .then(orders => {
+        const wrap = document.getElementById('liveOrdersWrap');
+        const cnt  = document.getElementById('liveCount');
+        const active = orders.filter(o => ['Pending','Cooking','Ready'].includes(o.status));
+        cnt.textContent = active.length + ' active';
+
+        if (!orders.length) {
+            wrap.innerHTML = '<div class="no-orders"><span class="empty-icon">📭</span>No active orders right now</div>';
+            return;
+        }
+
+        let html = `<table class="orders-table">
+            <thead><tr>
+                <th>Order #</th><th>Customer</th><th>Type</th><th>Items</th>
+                <th>Amount</th><th>Status</th><th>Action</th>
+            </tr></thead><tbody>`;
+
+        orders.forEach(o => {
+            const sc = o.status.toLowerCase();
+            let action = '';
+            /* API accepts "Cooking" and "Ready" — matching app.py valid_statuses */
+            if (o.status === 'Pending') {
+                action = `<button class="btn-cook-start" onclick="updateCookStatus(${o.order_id},'Cooking','${o.customer_name.replace(/'/g,"\\'")}')">🍳 Start Cooking</button>`;
+            } else if (o.status === 'Cooking') {
+                action = `<button class="btn-cook-ready" onclick="updateCookStatus(${o.order_id},'Ready','${o.customer_name.replace(/'/g,"\\'")}')">✅ Mark Ready</button>`;
+            } else {
+                action = `<span class="status-done">Done ✓</span>`;
+            }
+
+            html += `<tr>
+                <td style="font-weight:800;color:var(--orange);">#${o.order_id}</td>
+                <td style="font-weight:700;color:var(--text-h);">${o.customer_name}</td>
+                <td><span style="font-size:11px;background:var(--bg);border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-weight:700;">${o.order_type || '—'}</span></td>
+                <td style="font-size:12px;color:var(--text-s);">${o.items_summary || '—'}</td>
+                <td style="font-weight:800;color:var(--text-h);">₹${o.total_amount}</td>
+                <td><span class="status-pill ${sc}"><span class="status-dot"></span>${o.status}</span></td>
+                <td>${action}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+    })
+    .catch(() => {
+        document.getElementById('liveOrdersWrap').innerHTML =
+            '<div class="no-orders">Could not load orders. Will retry…</div>';
+    });
+}
+
+function updateCookStatus(orderId, newStatus, customerName) {
+    fetch('/api/cook/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: newStatus })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            const msgs = {
+                'Cooking': { title: '🍳 Cooking Started', body: `Order #${orderId} is now being cooked` },
+                'Ready':   { title: '✅ Order Ready',     body: `Order #${orderId} is ready for pickup` }
+            };
+            const m = msgs[newStatus] || { title: 'Status Updated', body: '' };
+            showToast(m.title, m.body, 'success');
+            loadLiveOrders();
+        } else {
+            showToast('Error', data.error || 'Could not update status', 'error');
+        }
+    })
+    .catch(() => showToast('Network Error', 'Could not reach server. Try again.', 'error'));
+}
+
+function showToast(title, body, type) {
+    const icons = { success: '✅', error: '❌', info: '🔔' };
+    const c = document.getElementById('cookToasts');
+    const t = document.createElement('div');
+    t.className = 'notif-toast ' + type;
+    t.innerHTML = `<div class="nt-icon">${icons[type] || '🔔'}</div>
+        <div><div class="nt-title">${title}</div><div class="nt-body">${body}</div></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(() => t.remove(), 420); }, 4000);
+}
+
+/* Animate numbers */
+document.querySelectorAll('.c-stat h2').forEach(el => {
+    const target = +el.textContent;
+    let n = 0; const step = Math.max(1, target / 40);
+    const iv = setInterval(() => { n = Math.min(n+step, target); el.textContent = Math.ceil(n); if(n>=target) clearInterval(iv); }, 22);
+});
+
+loadLiveOrders();
+setInterval(loadLiveOrders, 15000);
+</script>
+{% endblock %}

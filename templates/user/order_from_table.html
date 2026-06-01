@@ -1,0 +1,33 @@
+{% extends "User/user_base.html" %}
+{% block title %}Order From Table | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="page-title">🍽️ Order From Your Table</div>
+<p style="font-size:0.85rem; color:var(--text-sub); margin-top:-20px; margin-bottom:28px;">Add dishes to your table cart and pay when ready</p>
+
+<div class="menu-grid">
+    {% for item in menu_items %}
+    <div class="menu-card fade-in">
+        <img src="{{ url_for('static', filename='uploads/' + item.image) }}"
+             class="menu-image" alt="{{ item.item_name }}">
+        <div class="menu-card-body">
+            <h3>{{ item.item_name }}</h3>
+            <p>{{ item.description }}</p>
+            <div class="menu-price">₹{{ item.price }}</div>
+            <form method="POST" action="/add-to-cart-table/{{ item.item_id }}">
+                <button type="submit" class="btn" style="width:100%;">Add to Cart</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<a href="/view-table-cart" class="floating-cart">
+    🛒 View Cart
+    {% if cart_count > 0 %}
+    <span class="cart-badge">{{ cart_count }}</span>
+    {% endif %}
+</a>
+
+{% endblock %}

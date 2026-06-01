@@ -1,0 +1,165 @@
+{% extends "Employee/base_employee.html" %}
+{% block title %}My Tables | Waiter | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<style>
+  .wd-header { margin-bottom: 24px; }
+  .wd-header h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin: 0 0 4px; }
+  .wd-header p  { font-size: 13px; color: #8a8580; margin: 0; }
+
+  .wd-section { background: #fff; border: 1px solid #e8e5e0; border-radius: 14px; overflow: hidden; }
+  .wd-section-head { padding: 14px 18px; border-bottom: 1px solid #f0ede8; display: flex; align-items: center; justify-content: space-between; }
+  .wd-section-head h3 { font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 0; }
+  .wd-badge { font-size: 11px; font-weight: 600; color: #9a9690; background: #f5f3f0; padding: 3px 10px; border-radius: 20px; }
+
+  .wd-table-wrap { overflow-x: auto; }
+  .wd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .wd-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #9a9690; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f0ede8; background: #faf9f7; white-space: nowrap; }
+  .wd-table td { padding: 12px 16px; border-bottom: 1px solid #f5f3f0; color: #3a3632; vertical-align: middle; }
+  .wd-table tbody tr:last-child td { border-bottom: none; }
+  .wd-table tbody tr:hover td { background: #faf9f7; }
+
+  .sp { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 6px; }
+  .sp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sp.pending   { background: #fef9c3; color: #854d0e; } .sp.pending .sp-dot   { background: #ca8a04; }
+  .sp.cooking   { background: #ffedd5; color: #9a3412; } .sp.cooking .sp-dot   { background: #ea580c; }
+  .sp.ready     { background: #dcfce7; color: #166534; } .sp.ready .sp-dot     { background: #16a34a; }
+  .sp.served    { background: #dbeafe; color: #1e40af; } .sp.served .sp-dot    { background: #2563eb; }
+  .sp.completed { background: #e0f2fe; color: #0c4a6e; } .sp.completed .sp-dot { background: #0284c7; }
+  .sp.cancelled { background: #fee2e2; color: #991b1b; } .sp.cancelled .sp-dot { background: #dc2626; }
+
+  .btn-serve    { height: 30px; padding: 0 14px; background: #16a34a; color: #fff; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  .btn-serve:hover    { background: #15803d; }
+  .btn-complete { height: 30px; padding: 0 14px; background: #2563eb; color: #fff; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  .btn-complete:hover { background: #1d4ed8; }
+  .btn-serve:disabled, .btn-complete:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-done { font-size: 12px; color: #9a9690; font-weight: 500; }
+
+  .wd-empty { padding: 40px 20px; text-align: center; color: #b0ada8; font-size: 13px; }
+  .wd-empty-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  .notif-toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .notif-toast { display: flex; align-items: flex-start; gap: 10px; background: #fff; border: 1px solid #e8e5e0; border-radius: 12px; padding: 14px 16px; min-width: 260px; max-width: 340px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); transition: opacity .4s, transform .4s; }
+  .notif-toast.success { border-left: 3px solid #16a34a; }
+  .notif-toast.error   { border-left: 3px solid #dc2626; }
+  .nt-icon  { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .nt-title { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+  .nt-body  { font-size: 12px; color: #8a8580; }
+</style>
+
+<div class="wd-header">
+  <h2>🪑 My Assigned Tables</h2>
+  <p>Update order status as customers are served</p>
+</div>
+
+<div class="wd-section">
+  <div class="wd-section-head">
+    <h3>Table Orders</h3>
+    {% if orders %}<span class="wd-badge">{{ orders|length }} order{{ 's' if orders|length != 1 }}</span>{% endif %}
+  </div>
+
+  {% if orders %}
+  <div class="wd-table-wrap">
+    <table class="wd-table">
+      <thead>
+        <tr><th>Order #</th><th>Table</th><th>Customer</th><th>Date</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+      {% for order in orders %}
+      <tr id="row-{{ order.order_id }}">
+        <td style="font-weight:800;color:#f97316;">#{{ order.order_id }}</td>
+        <td style="font-weight:600;color:#1a1a1a;">
+          {% if order.table_id %}Table {{ order.table_id }}{% else %}<span style="color:#c0bdb8;">—</span>{% endif %}
+        </td>
+        <td style="color:#6b6762;">{{ order.customer_name }}</td>
+        <td style="color:#9a9690;font-size:12px;">{{ order.order_date }}</td>
+        <td>
+          <span class="sp {{ order.status|lower }} status-pill-{{ order.order_id }}">
+            <span class="sp-dot"></span>{{ order.status }}
+          </span>
+        </td>
+        <td class="action-cell-{{ order.order_id }}">
+          {% if order.status == 'Ready' %}
+          <button class="btn-serve" onclick="updateStatus({{ order.order_id }}, 'Served', this)">🍽 Mark Served</button>
+          {% elif order.status == 'Served' %}
+          <button class="btn-complete" onclick="updateStatus({{ order.order_id }}, 'Completed', this)">✅ Complete</button>
+          {% else %}
+          <span class="status-done">{{ order.status }} ✓</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="wd-empty">
+    <span class="wd-empty-icon">🪑</span>
+    No table orders assigned yet.
+  </div>
+  {% endif %}
+</div>
+
+<div class="notif-toast-container" id="waiterToasts"></div>
+
+<script>
+function updateStatus(orderId, newStatus, btn) {
+  btn.disabled = true;
+
+  fetch('/api/waiter/update-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order_id: orderId, status: newStatus })
+  })
+  .then(r => {
+    if (r.status === 401) throw new Error('Session expired — please log in again');
+    if (r.status === 404) throw new Error(`Order #${orderId} not found`);
+    if (!r.ok) throw new Error(`Server error (${r.status})`);
+    return r.json();
+  })
+  .then(data => {
+    if (data.status === 'ok') {
+      const labels = { 'Served': '🍽 Order Served', 'Completed': '✅ Order Completed' };
+      showToast(labels[newStatus] || 'Updated', `Order #${orderId} updated to ${newStatus}`, 'success');
+
+      /* Update status pill */
+      const pill = document.querySelector(`.status-pill-${orderId}`);
+      if (pill) {
+        pill.className = `sp ${newStatus.toLowerCase()} status-pill-${orderId}`;
+        pill.innerHTML = `<span class="sp-dot"></span>${newStatus}`;
+      }
+
+      /* Update action button */
+      const actionCell = document.querySelector(`.action-cell-${orderId}`);
+      if (actionCell) {
+        if (newStatus === 'Served') {
+          actionCell.innerHTML = `<button class="btn-complete" onclick="updateStatus(${orderId},'Completed',this)">✅ Complete</button>`;
+        } else {
+          actionCell.innerHTML = `<span class="status-done">Completed ✓</span>`;
+        }
+      }
+    } else {
+      showToast('Error', data.error || 'Could not update status', 'error');
+      btn.disabled = false;
+    }
+  })
+  .catch(err => {
+    showToast('Error', err.message || 'Could not reach server. Try again.', 'error');
+    btn.disabled = false;
+  });
+}
+
+function showToast(title, body, type) {
+  const icons = { success: '✅', error: '❌' };
+  const c = document.getElementById('waiterToasts');
+  const t = document.createElement('div');
+  t.className = 'notif-toast ' + type;
+  t.innerHTML = `<div class="nt-icon">${icons[type]||'🔔'}</div>
+    <div><div class="nt-title">${title}</div><div class="nt-body">${body}</div></div>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>t.remove(),420); }, 4000);
+}
+</script>
+
+{% endblock %}

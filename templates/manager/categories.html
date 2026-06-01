@@ -1,0 +1,55 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Categories{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Manage Categories</h1>
+
+<div class="section">
+    <h2 class="section-title">Add New Category</h2>
+
+    <form method="POST" action="/manager/add-category"
+          style="display:flex;gap:10px;margin-bottom:28px;align-items:flex-end;">
+        <div style="flex:1;">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                Category Name
+            </label>
+            <input type="text" name="category_name"
+                   placeholder="e.g. Starters, Desserts…"
+                   required style="max-width:360px;">
+        </div>
+        <button class="btn" type="submit" style="height:42px;">Add Category</button>
+    </form>
+
+    <h2 class="section-title">🗂️ Category List</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in categories %}
+            <tr>
+                <td><span style="font-weight:800;color:var(--orange);">{{ cat.category_id }}</span></td>
+                <td><strong style="color:var(--text-h);">{{ cat.category_name }}</strong></td>
+                <td>
+                    <a href="/manager/delete-category/{{ cat.category_id }}"
+                       onclick="return confirm('Delete this category?')"
+                       style="text-decoration:none;">
+                        <button class="btn btn-danger" style="padding:5px 12px;font-size:12.5px;">
+                            🗑 Delete
+                        </button>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

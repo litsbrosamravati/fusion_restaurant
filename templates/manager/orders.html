@@ -1,0 +1,676 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Orders Management{% endblock %}
+
+{% block content %}
+
+<style>
+  .om-page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .om-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  .om-badge-count {
+    background: #f97316;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Grid ── */
+  .om-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  /* ── Panel ── */
+  .om-panel {
+    background: #fff;
+    border: 1px solid #e8e5e0;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .om-panel-header {
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid #f0ede8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .om-panel-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .om-panel-icon.online  { background: #fff7ed; }
+  .om-panel-icon.visitor { background: #f0fdf4; }
+  .om-panel-icon.table   { background: #eff6ff; }
+  .om-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    flex: 1;
+  }
+  .om-panel-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9a9690;
+    background: #f5f3f0;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .om-order-list {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 520px;
+    overflow-y: auto;
+  }
+  .om-order-list::-webkit-scrollbar { width: 4px; }
+  .om-order-list::-webkit-scrollbar-track { background: transparent; }
+  .om-order-list::-webkit-scrollbar-thumb { background: #e0dcd6; border-radius: 4px; }
+
+  /* ── Order Card ── */
+  .om-card {
+    background: #faf9f7;
+    border: 1px solid #ede9e4;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .om-card:hover { background: #f5f2ee; border-color: #d8d3cc; }
+  .om-card-left { flex: 1; min-width: 0; }
+  .om-card-id {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f97316;
+    margin-bottom: 4px;
+  }
+  .om-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .om-card-table {
+    font-size: 11px;
+    color: #6b6762;
+    background: #eeeae5;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 500;
+  }
+
+  /* ── Status badges ── */
+  .om-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 5px;
+    display: inline-block;
+  }
+  .om-status.pending   { background: #fef9c3; color: #854d0e; }
+  .om-status.cooking   { background: #ffedd5; color: #9a3412; }
+  .om-status.ready     { background: #dcfce7; color: #166534; }
+  .om-status.served    { background: #dbeafe; color: #1e40af; }
+  .om-status.delivering{ background: #ede9fe; color: #5b21b6; }
+  .om-status.delivered { background: #d1fae5; color: #065f46; }
+  .om-status.completed { background: #e0f2fe; color: #0c4a6e; }
+  .om-status.cancelled { background: #fee2e2; color: #991b1b; }
+  .om-status.default   { background: #f3f4f6; color: #374151; }
+
+  /* ── More button ── */
+  .more-btn {
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid #e0dcd6;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a4642;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .more-btn:hover {
+    background: #f97316;
+    border-color: #f97316;
+    color: #fff;
+  }
+
+  /* ── Empty state ── */
+  .om-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: #b0ada8;
+    font-size: 13px;
+  }
+
+  /* ── Modal overlay ── */
+  .om-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .om-overlay.active { display: flex; }
+
+  /* ── Modal box ── */
+  .om-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 500px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  }
+  .om-modal-header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid #f0ede8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .om-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+  }
+  .om-modal-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid #e8e5e0;
+    background: #faf9f7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #6b6762;
+    transition: background 0.15s;
+  }
+  .om-modal-close:hover { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+  .om-modal-body { padding: 18px 22px; }
+
+  /* Customer info block */
+  .om-info-block {
+    background: #faf9f7;
+    border: 1px solid #ede9e4;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .om-info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #9a9690;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 3px;
+  }
+  .om-info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  /* Items list */
+  .om-items-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #9a9690;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+  .om-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0ede8;
+    font-size: 13px;
+    color: #3a3632;
+  }
+  .om-item-row:last-child { border-bottom: none; }
+  .om-item-qty {
+    font-weight: 700;
+    color: #f97316;
+    background: #fff7ed;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+  }
+
+  /* Status update section */
+  .om-status-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f0ede8;
+  }
+  .om-status-section label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #9a9690;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .om-status-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  #statusSelect {
+    flex: 1;
+    height: 36px;
+    border: 1px solid #e0dcd6;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #3a3632;
+    background: #faf9f7;
+    cursor: pointer;
+    outline: none;
+  }
+  #statusSelect:focus { border-color: #f97316; }
+  .om-btn-update {
+    height: 36px;
+    padding: 0 16px;
+    background: #f97316;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .om-btn-update:hover { background: #ea6d0a; }
+
+  /* Assign buttons */
+  .om-assign-section {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .om-btn-assign {
+    flex: 1;
+    min-width: 100px;
+    height: 36px;
+    background: #fff;
+    border: 1px solid #e0dcd6;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a4642;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .om-btn-assign:hover { background: #f5f2ee; border-color: #c8c3bc; }
+
+  /* Employee modal */
+  .om-emp-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #faf9f7;
+    border: 1px solid #ede9e4;
+    border-radius: 9px;
+    margin-bottom: 8px;
+  }
+  .om-emp-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .om-btn-emp-assign {
+    height: 30px;
+    padding: 0 14px;
+    background: #f97316;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .om-btn-emp-assign:hover { background: #ea6d0a; }
+
+  .om-assigned-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #166534;
+    background: #dcfce7;
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+</style>
+
+<div class="om-page-header">
+  <h1 class="om-page-title">Orders Management</h1>
+</div>
+
+<div class="om-grid">
+
+  <!-- ── Online Orders ── -->
+  <div class="om-panel">
+    <div class="om-panel-header">
+      <div class="om-panel-icon online">🌐</div>
+      <h2 class="om-panel-title">Online Orders</h2>
+      <span class="om-panel-count">{{ online_orders|length }}</span>
+    </div>
+    <div class="om-order-list">
+      {% for order in online_orders %}
+      <div class="om-card" id="order-card-online-{{ order.order_id }}">
+        <div class="om-card-left">
+          <div class="om-card-id">Order #{{ order.order_id }}</div>
+          <div class="om-card-meta">
+            <span class="om-status order-status-text {{ order.status|lower }}">{{ order.status }}</span>
+          </div>
+        </div>
+        <button class="more-btn" onclick="openOrder('online', {{ order.order_id }})">Details</button>
+      </div>
+      {% else %}
+      <div class="om-empty">No online orders</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Visitor Table Orders ── -->
+  <div class="om-panel">
+    <div class="om-panel-header">
+      <div class="om-panel-icon visitor">🪑</div>
+      <h2 class="om-panel-title">Visitor Orders</h2>
+      <span class="om-panel-count">{{ visitor_orders|length }}</span>
+    </div>
+    <div class="om-order-list">
+      {% for order in visitor_orders %}
+      <div class="om-card" id="order-card-visitor-{{ order.order_id }}">
+        <div class="om-card-left">
+          <div class="om-card-id">Order #{{ order.order_id }}</div>
+          <div class="om-card-meta">
+            <span class="om-card-table">Table {{ order.table_no }}</span>
+            <span class="om-status order-status-text {{ order.order_status|lower }}">{{ order.order_status }}</span>
+          </div>
+        </div>
+        <button class="more-btn" onclick="openOrder('visitor', {{ order.order_id }})">Details</button>
+      </div>
+      {% else %}
+      <div class="om-empty">No visitor orders</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Booked Table Orders ── -->
+  <div class="om-panel">
+    <div class="om-panel-header">
+      <div class="om-panel-icon table">📅</div>
+      <h2 class="om-panel-title">Booked Tables</h2>
+      <span class="om-panel-count">{{ table_orders|length }}</span>
+    </div>
+    <div class="om-order-list">
+      {% for order in table_orders %}
+      <div class="om-card" id="order-card-table-{{ order.order_id }}">
+        <div class="om-card-left">
+          <div class="om-card-id">Order #{{ order.order_id }}</div>
+          <div class="om-card-meta">
+            <span class="om-card-table">Table {{ order.table_number }}</span>
+            <span class="om-status order-status-text {{ order.status|lower }}">{{ order.status }}</span>
+          </div>
+        </div>
+        <button class="more-btn" onclick="openOrder('table', {{ order.order_id }})">Details</button>
+      </div>
+      {% else %}
+      <div class="om-empty">No booked table orders</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Order Details Modal ── -->
+<div id="orderModal" class="om-overlay">
+  <div class="om-modal">
+    <div class="om-modal-header">
+      <h2 class="om-modal-title">Order Details</h2>
+      <button class="om-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="om-modal-body">
+      <div id="orderDetails"></div>
+
+      <div class="om-status-section">
+        <label>Update Status</label>
+        <div class="om-status-row">
+          <select id="statusSelect"></select>
+          <button class="om-btn-update" onclick="updateStatus()">Update</button>
+        </div>
+      </div>
+
+      <div class="om-assign-section">
+        <button class="om-btn-assign" id="cookBtn" onclick="assignRole('Cook')">👨‍🍳 Assign Cook</button>
+        <button class="om-btn-assign" id="waiterBtn" onclick="assignRole('Waiter')">🍽️ Assign Waiter</button>
+        <button class="om-btn-assign" id="deliveryBtn" onclick="assignRole('Delivery')">🛵 Assign Delivery</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Employee Select Modal ── -->
+<div id="employeeModal" class="om-overlay">
+  <div class="om-modal" style="max-width:420px;">
+    <div class="om-modal-header">
+      <h2 class="om-modal-title">Select Employee</h2>
+      <button class="om-modal-close" onclick="closeEmployee()">✕</button>
+    </div>
+    <div class="om-modal-body">
+      <div id="employeeList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentOrder = null;
+let currentSource = null;
+
+const STATUS_MAP = {
+  "visitor": ["Pending","Cooking","Ready","Served","Completed"],
+  "table":   ["Pending","Cooking","Ready","Served","Cancelled"],
+  "online":  ["Pending","Cooking","Ready","Delivered","Cancelled"]
+};
+
+function getStatusClass(status) {
+  const map = {
+    "Pending":"pending","Cooking":"cooking","Ready":"ready",
+    "Served":"served","Delivering":"delivering","Delivered":"delivered",
+    "Completed":"completed","Cancelled":"cancelled"
+  };
+  return map[status] || "default";
+}
+
+function openOrder(source, id) {
+  currentOrder = id;
+  currentSource = source;
+
+  fetch(`/manager/order_details/${source}/${id}`)
+  .then(res => {
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    const status = data.order.status || data.order.order_status;
+    const sc = getStatusClass(status);
+
+    let html = `<div class="om-info-block">
+      <div>
+        <div class="om-info-label">Customer</div>
+        <div class="om-info-value">${data.order.customer_name || "Guest"}</div>
+      </div>
+      <div>
+        <div class="om-info-label">Status</div>
+        <div class="om-info-value"><span class="om-status ${sc}">${status}</span></div>
+      </div>
+    </div>`;
+
+    html += `<div class="om-items-label">Items</div>`;
+    data.items.forEach(item => {
+      html += `<div class="om-item-row">
+        <span>${item.item_name}</span>
+        <span class="om-item-qty">× ${item.quantity}</span>
+      </div>`;
+    });
+
+    document.getElementById("orderDetails").innerHTML = html;
+
+    if (source === "online") {
+      document.getElementById("waiterBtn").style.display = "none";
+      document.getElementById("deliveryBtn").style.display = "flex";
+    } else {
+      document.getElementById("waiterBtn").style.display = "flex";
+      document.getElementById("deliveryBtn").style.display = "none";
+    }
+
+    const sel = document.getElementById("statusSelect");
+    sel.innerHTML = "";
+    STATUS_MAP[source].forEach(st => {
+      const o = document.createElement("option");
+      o.value = st; o.text = st;
+      sel.appendChild(o);
+    });
+    sel.value = status;
+
+    document.getElementById("orderModal").classList.add("active");
+  })
+  .catch(err => alert("Error fetching order details: " + err));
+}
+
+function closeModal() {
+  document.getElementById("orderModal").classList.remove("active");
+}
+
+function assignRole(role) {
+  fetch(`/manager/get_employees/${role}`)
+  .then(res => res.json())
+  .then(data => {
+    let html = "";
+    if (!data.length) {
+      html = `<div style="text-align:center;color:#9a9690;padding:20px;font-size:13px;">No employees available</div>`;
+    }
+    data.forEach(emp => {
+      html += `<div class="om-emp-card">
+        <span class="om-emp-name">${emp.name}</span>
+        <button class="om-btn-emp-assign" onclick="assignEmployee(${emp.user_id},'${role}')">Assign</button>
+      </div>`;
+    });
+    document.getElementById("employeeList").innerHTML = html;
+    document.getElementById("employeeModal").classList.add("active");
+  })
+  .catch(err => alert("Error fetching employees: " + err));
+}
+
+function closeEmployee() {
+  document.getElementById("employeeModal").classList.remove("active");
+}
+
+function assignEmployee(empId, role) {
+  if (!currentOrder || !currentSource) { alert("No order selected!"); return; }
+  fetch("/manager/assign_employee", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: currentOrder, employee_id: empId, role: role, source: currentSource })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "assigned") {
+      alert("Employee Assigned Successfully");
+      closeEmployee();
+      closeModal();
+      const card = document.getElementById(`order-card-${currentSource}-${currentOrder}`);
+      if (card) {
+        const meta = card.querySelector(".om-card-meta");
+        if (!meta.innerHTML.includes(`${role}: Assigned`)) {
+          meta.innerHTML += `<span class="om-assigned-tag">✓ ${role}</span>`;
+        }
+      }
+    } else if (data.error) { alert(data.error); }
+  })
+  .catch(err => alert("Error assigning employee: " + err));
+}
+
+function updateStatus() {
+  const status = document.getElementById("statusSelect").value;
+  fetch("/manager/update_order_status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: currentOrder, status: status, source: currentSource })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "updated") {
+      alert("Status Updated");
+      closeModal();
+      const card = document.getElementById(`order-card-${currentSource}-${currentOrder}`);
+      if (card) {
+        const badge = card.querySelector(".order-status-text");
+        badge.textContent = status;
+        badge.className = `om-status order-status-text ${getStatusClass(status)}`;
+      }
+    } else if (data.error) { alert(data.error); }
+  })
+  .catch(err => alert("Error updating status: " + err));
+}
+
+// Close modal on overlay click
+document.getElementById("orderModal").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById("employeeModal").addEventListener("click", function(e) {
+  if (e.target === this) closeEmployee();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Fusion Feast{% endblock %}
+
+{% block content %}
+
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <style>
+        /* ===== Scroll Slide Animation ===== */
+
+        .slide-left,
+        .slide-right {
+            opacity: 0;
+            transition: all 1s ease;
+        }
+
+        .slide-left {
+            transform: translateX(-120px);
+        }
+
+        .slide-right {
+            transform: translateX(120px);
+        }
+
+        .show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Stagger Effect */
+        .about-card:nth-child(1),
+        .why-card:nth-child(1),
+        .menu-card:nth-child(1),
+        .review-card:nth-child(1) { transition-delay: 0.1s; }
+
+        .about-card:nth-child(2),
+        .why-card:nth-child(2),
+        .menu-card:nth-child(2),
+        .review-card:nth-child(2) { transition-delay: 0.3s; }
+
+        .about-card:nth-child(3),
+        .why-card:nth-child(3),
+        .menu-card:nth-child(3),
+        .review-card:nth-child(3) { transition-delay: 0.5s; }
+
+        .about-card:nth-child(4),
+        .why-card:nth-child(4) { transition-delay: 0.7s; }
+    </style>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const elements = document.querySelectorAll(".slide-left, .slide-right");
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+
+            if (entry.isIntersecting) {
+                // Visible hua → animation add karo
+                entry.target.classList.add("show");
+            } else {
+                // Screen se bahar gaya → animation reset karo
+                entry.target.classList.remove("show");
+            }
+
+        });
+    }, {
+        threshold: 0.25
+    });
+
+    elements.forEach(el => {
+        observer.observe(el);
+    });
+
+});
+</script>
+
+
+<!-- GLOBAL BACKGROUND VIDEO -->
+<div class="global-video">
+    <video autoplay muted loop playsinline>
+        <source src="/static/videos/backbody.mp4" type="video/mp4">
+    </video>
+</div>
+
+
+<!-- HERO SECTION -->
+<section class="hero">
+    <video autoplay muted loop playsinline class="hero-video">
+        <source src="/static/videos/hero.mp4" type="video/mp4">
+    </video>
+    <div class="hero-overlay"></div>
+    <div class="hero-text">
+        <h2>Where Flavors Unite 🍽</h2>
+        <p>Fresh • Delicious • Hygienic</p>
+        <a href="{{ url_for('view_menu') }}" class="btn">Explore Menu</a>
+    </div>
+</section>
+
+<!-- ABOUT SECTION -->
+<section class="about">
+    <div class="about-container">
+
+        <div class="about-text">
+            <h2>About Fusion Feast</h2>
+            <p>Fusion Feast is where tradition meets innovation.</p>
+        </div>
+
+        <div class="about-cards">
+
+            <div class="about-card slide-left">
+                <h3>Fresh Ingredients</h3>
+                <p>Farm-fresh vegetables & premium quality spices.</p>
+            </div>
+
+            <div class="about-card slide-right">
+                <h3>Expert Chefs</h3>
+                <p>Modern techniques with traditional recipes.</p>
+            </div>
+
+            <div class="about-card slide-left">
+                <h3>Fast Delivery</h3>
+                <p>Quick doorstep delivery with hygiene.</p>
+            </div>
+
+            <div class="about-card slide-right">
+                <h3>Delicious Desserts</h3>
+                <p>Mouth-watering sweet treats.</p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- WHY US -->
+<section class="why-us">
+    <h2>Why Choose Fusion Feast</h2>
+
+    <div class="why-cards">
+        <div class="why-card slide-left">
+            <h3>Premium Quality</h3>
+            <p>Top-grade ingredients & hygiene.</p>
+        </div>
+
+        <div class="why-card slide-right">
+            <h3>Authentic Taste</h3>
+            <p>Perfect fusion flavors.</p>
+        </div>
+
+        <div class="why-card slide-left">
+            <h3>Quick Service</h3>
+            <p>Fast preparation & delivery.</p>
+        </div>
+
+        <div class="why-card slide-right">
+            <h3>Customer Love</h3>
+            <p>Thousands of happy food lovers.</p>
+        </div>
+    </div>
+</section>
+
+<!-- MENU -->
+<section class="menu">
+    <h2>Popular Dishes</h2>
+
+    <div class="menu-grid">
+        <div class="menu-card slide-left">
+            <img src="/static/images/butterpaneer.jpeg">
+            <h3>Paneer Butter Masala</h3>
+            <p>₹220</p>
+        </div>
+
+        <div class="menu-card slide-right">
+            <img src="/static/images/chickenbiryani.jpeg">
+            <h3>Chicken Biryani</h3>
+            <p>₹280</p>
+        </div>
+
+        <div class="menu-card slide-left">
+            <img src="/static/images/chocolatedesert.jpeg">
+            <h3>Chocolate Dessert</h3>
+            <p>₹150</p>
+        </div>
+    </div>
+</section>
+
+<!-- VIDEO SECTION -->
+<section class="video slide-left">
+    <h2>Our Kitchen</h2>
+    <video controls>
+        <source src="/static/videos/kitchen.mp4" type="video/mp4">
+    </video>
+</section>
+
+<!-- REVIEWS -->
+<section class="reviews">
+    <h2>What Our Customers Say</h2>
+
+    <div class="review-cards">
+        <div class="review-card slide-left">
+            <p>"Absolutely delicious food!"</p>
+            <h4>- Rahul ⭐⭐⭐⭐⭐</h4>
+        </div>
+
+        <div class="review-card slide-right">
+            <p>"Perfect fusion flavors."</p>
+            <h4>- Ananya ⭐⭐⭐⭐⭐</h4>
+        </div>
+
+        <div class="review-card slide-left">
+            <p>"Great ambiance and staff."</p>
+            <h4>- Mohit ⭐⭐⭐⭐☆</h4>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<!-- FOOTER -->
+<footer class="site-footer" id="contact">
+  <div class="footer-container">
+
+    <!-- ABOUT -->
+    <div class="footer-box">
+      <h3>Fusion Feast</h3>
+      <p>
+        Where flavors unite! Experience a perfect blend of traditional and modern cuisines
+        crafted with passion and freshness.
+      </p>
+    </div>
+
+    <!-- QUICK LINKS -->
+    <div class="footer-box">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#menu">Menu</a></li>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+
+    <!-- OPENING HOURS -->
+    <div class="footer-box">
+      <h4>Opening Hours</h4>
+      <p>Mon – Fri: 10:00 AM – 10:00 PM</p>
+      <p>Saturday: 11:00 AM – 11:30 PM</p>
+      <p>Sunday: Closed</p>
+    </div>
+
+    <!-- CONTACT -->
+    <div class="footer-box">
+      <h4>Contact Us</h4>
+      <p>📍 Mumbai, India</p>
+      <p>📞 +91 98765 43210</p>
+      <p>✉ fusionfeast@gmail.com</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER BOTTOM -->
+  <div class="footer-bottom">
+    <p>&copy; 2026 Fusion Feast | Designed with ❤️</p>
+  </div>
+</footer>
+
+<!-- ===== SCROLL ANIMATION SCRIPT ===== -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const elements = document.querySelectorAll(".slide-left, .slide-right");
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("show");
+                }
+            });
+        }, {
+            threshold: 0.2
+        });
+
+        elements.forEach(el => {
+            observer.observe(el);
+        });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,137 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    height: 100vh;
+    background: url("/static/images/loginback.jpg") no-repeat center center/cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-container {
+    width: 85%;
+    max-width: 1100px;
+    min-height: 550px;
+align-items: stretch;
+    display: flex;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+
+/* LEFT SIDE */
+.login-left {
+    flex: 1;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.brand-box {
+    text-align: center;
+}
+
+.brand-box img {
+    width: 120px;
+    margin-bottom: 20px;
+}
+
+.brand-box h1 {
+    font-size: 40px;
+    margin: 0;
+}
+
+.brand-box p {
+    opacity: 0.8;
+}
+
+/* RIGHT SIDE */
+.login-right {
+    flex: 1;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form-box {
+    width: 65%;
+    max-width: 400px;
+}
+
+.form-box h2 {
+    margin-bottom: 20px;
+    color: #7b1e1e;
+}
+
+form label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+form select,
+form input,
+form textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    outline: none;
+    font-size: 14px;
+}
+
+form textarea {
+    resize: none;
+    height: 60px;
+}
+
+form button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: #7b1e1e;
+    color: white;
+    font-size: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+
+form button:hover {
+    background: #a52a2a;
+}
+
+.register-link{
+    text-align:center;
+    margin-top:18px;
+    font-size:14px;
+    color:#444;
+}
+
+.register-link p{
+    margin:0;
+}
+
+.register-link a{
+    display:inline-block;
+    margin-top:6px;
+    color:#7b1e1e;
+    font-weight:600;
+    text-decoration:none;
+    transition:0.3s;
+}
+
+.register-link a:hover{
+    color:#a52a2a;
+    text-decoration:underline;
+}
+
+.error {
+    color: red;
+    margin-top: 10px;
+}

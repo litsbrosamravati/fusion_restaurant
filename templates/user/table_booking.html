@@ -1,0 +1,123 @@
+{% extends "User/user_base.html" %}
+{% block title %}Book a Table | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="page-title">📅 Book a Table</div>
+<p style="font-size:0.85rem; color:var(--text-sub); margin-top:-20px; margin-bottom:24px;">Reserve your perfect spot for a memorable dining experience</p>
+
+<!-- Ambiance strip -->
+<div class="food-hero-strip fade-in" style="margin-bottom:28px;">
+    <div class="food-hero-cell">
+        <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=260&fit=crop&auto=format" alt="Restaurant">
+        <span class="cell-label">Fine Dining</span>
+    </div>
+    <div class="food-hero-cell">
+        <img src="https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=260&fit=crop&auto=format" alt="Ambiance">
+        <span class="cell-label">Ambiance</span>
+    </div>
+    <div class="food-hero-cell">
+        <img src="https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=400&h=260&fit=crop&auto=format" alt="Table Setting">
+        <span class="cell-label">Table Setting</span>
+    </div>
+    <div class="food-hero-cell">
+        <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2?w=400&h=260&fit=crop&auto=format" alt="Cocktails">
+        <span class="cell-label">Drinks</span>
+    </div>
+    <div class="food-hero-cell">
+        <img src="https://images.unsplash.com/photo-1544025162-d76538485696?w=400&h=260&fit=crop&auto=format" alt="Food">
+        <span class="cell-label">Cuisine</span>
+    </div>
+</div>
+
+<!-- Available Tables -->
+<div class="tables-section-title">✅ Available Tables</div>
+<div class="menu-grid">
+    {% for table in available_tables %}
+    <div class="menu-card available fade-in">
+        <img class="menu-image"
+             src="{{ url_for('static', filename='images/tables/' ~ table.photo) }}"
+             alt="Table {{ table.table_number }}">
+        <div class="menu-card-body">
+            <h3>Table {{ table.table_number }}</h3>
+            <p>Capacity: {{ table.capacity }} guests · ₹{{ table.price_per_person }} per person</p>
+            <button class="btn open-modal" style="width:100%;"
+                    data-table-id="{{ table.table_id }}"
+                    data-table-name="Table {{ table.table_number }}"
+                    data-capacity="{{ table.capacity }}"
+                    data-price="{{ table.price_per_person }}">
+                Book This Table
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if booked_tables %}
+<div class="tables-section-title">🔴 Currently Booked</div>
+<div class="menu-grid">
+    {% for table in booked_tables %}
+    <div class="menu-card booked fade-in">
+        <img class="menu-image"
+             src="{{ url_for('static', filename='images/tables/' ~ table.photo) }}"
+             alt="Table {{ table.table_number }}">
+        <div class="menu-card-body">
+            <h3>Table {{ table.table_number }}</h3>
+            <p>Capacity: {{ table.capacity }} guests</p>
+            <p style="font-size:0.75rem; color:var(--text-muted);">{{ table.booking_date }} {{ table.booking_time }} → {{ table.end_time.strftime('%H:%M') }}</p>
+            {% if table.end_time <= current_time %}
+            <p style="color:var(--green); font-size:0.8rem; font-weight:600;">Now Available</p>
+            {% else %}
+            <p style="color:var(--red); font-size:0.8rem; font-weight:600;">Free after {{ table.end_time.strftime('%H:%M') }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Booking Modal -->
+<div class="modern-modal" id="tableModal">
+    <div class="modern-modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Book Table</h3>
+            <button class="close-btn" id="closeModal">✕</button>
+        </div>
+        <p id="tableInfo" style="color:var(--text-sub); font-size:0.82rem; margin-bottom:18px;"></p>
+        <form method="POST" action="/table_booking">
+            <input type="hidden" name="table_id" id="modalTableId">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="booking_date" required>
+            </div>
+            <div class="form-group">
+                <label>Time</label>
+                <input type="time" name="booking_time" required>
+            </div>
+            <div class="form-group">
+                <label>Number of Guests</label>
+                <input type="number" name="guests" id="modalGuests" min="1" required>
+            </div>
+            <button type="submit" class="btn" style="width:100%;">Confirm Booking & Pay</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const modal=document.getElementById('tableModal');
+document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
+window.addEventListener('click',e=>{if(e.target===modal) modal.style.display='none';});
+
+document.querySelectorAll('.open-modal').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        modal.style.display='flex';
+        document.getElementById('modalTableId').value=btn.dataset.tableId;
+        document.getElementById('modalTitle').textContent='Book '+btn.dataset.tableName;
+        document.getElementById('tableInfo').innerHTML=
+            `<strong>${btn.dataset.tableName}</strong> · Capacity: ${btn.dataset.capacity} guests · ₹${btn.dataset.price}/person`;
+        document.getElementById('modalGuests').max=btn.dataset.capacity;
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Super Admin{% endblock %}</title>
+
+    <!-- Clean modern font — Nunito (friendly, legible, restaurant-appropriate) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+    /* ========================================
+       TOKENS
+    ======================================== */
+    :root {
+        --orange:       #ff6600;
+        --orange-h:     #e85c00;
+        --orange-soft:  #fff4ee;
+        --orange-mid:   #ffead9;
+
+        --sidebar-bg:   #111111;
+        --sidebar-w:    240px;
+
+        /* MAIN — clean white */
+        --bg:           #f2f4f8;
+        --white:        #ffffff;
+        --border:       #e0e4ec;
+        --border-2:     #cbd2df;
+
+        /* TEXT — clear contrast */
+        --text-h:       #0f1117;   /* headings */
+        --text-b:       #2d3340;   /* body */
+        --text-s:       #6b7280;   /* secondary */
+        --text-p:       #9aa0ad;   /* placeholder / dim */
+
+        --green:        #16a34a;
+        --green-soft:   #f0fdf4;
+        --red:          #dc2626;
+        --red-soft:     #fef2f2;
+        --blue:         #2563eb;
+        --blue-soft:    #eff6ff;
+
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 14px rgba(0,0,0,0.08);
+        --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
+
+        --r-sm: 8px;
+        --r:    12px;
+        --r-lg: 16px;
+        --t:    all 0.18s ease;
+    }
+
+    /* ========================================
+       RESET
+    ======================================== */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text-b);
+        font-family: 'Nunito', sans-serif;
+        font-size: 14.5px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ========================================
+       SIDEBAR
+    ======================================== */
+    .sidebar {
+        width: var(--sidebar-w);
+        height: 100vh;
+        position: fixed;
+        top: 0; left: 0;
+        background: var(--sidebar-bg);
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
+        overflow: hidden;
+    }
+
+    /* orange stripe */
+    .sidebar::before {
+        content: '';
+        display: block;
+        height: 3px;
+        flex-shrink: 0;
+        background: linear-gradient(90deg, var(--orange), #ffb347, transparent);
+    }
+
+    /* brand */
+    .sidebar-brand {
+        padding: 20px 20px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .sidebar-brand h2 {
+        font-family: 'Nunito', sans-serif;
+        font-size: 17px;
+        font-weight: 900;
+        color: white;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        text-align:center;
+    }
+
+    .sidebar-brand p {
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.68);
+        margin-top: 3px;
+        letter-spacing: 1.2px;
+        text-align:center;
+
+    }
+
+    /* nav */
+    .sidebar-nav {
+        flex: 1;
+        padding: 14px 12px;
+        overflow-y: auto;
+    }
+
+    .sidebar-nav label {
+        display: block;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.42);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: 4px 10px 8px;
+        margin-top: 4px;
+    }
+
+    .sidebar a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 13px;
+        margin-bottom: 2px;
+        text-decoration: none;
+        color: rgba(255,255,255,0.62);
+        border-radius: var(--r-sm);
+        font-size: 14px;
+        font-weight: 600;
+        transition: var(--t);
+    }
+
+    .sidebar a .icon {
+        font-size: 16px;
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .sidebar a:hover {
+        background: rgba(255,255,255,0.07);
+        color: #fff;
+    }
+
+    .sidebar a.active {
+        background: var(--orange);
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .sidebar a.active:hover { background: var(--orange-h); }
+
+    /* footer */
+    .sidebar-footer {
+        padding: 12px;
+        border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .sidebar-footer a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 9px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: var(--r-sm);
+        color: rgba(255,255,255,0.45);
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: var(--t);
+    }
+
+    .sidebar-footer a:hover {
+        background: rgba(220,38,38,0.12);
+        border-color: rgba(220,38,38,0.35);
+        color: #f87171;
+    }
+
+    /* ========================================
+       MAIN CONTENT
+    ======================================== */
+    .main-content {
+        margin-left: var(--sidebar-w);
+        padding: 32px 36px;
+        min-height: 100vh;
+        background: var(--bg);
+    }
+
+    /* ========================================
+       PAGE TITLE
+    ======================================== */
+    .page-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text-h);
+        margin-bottom: 26px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .page-title::before {
+        content: '';
+        display: block;
+        width: 4px;
+        height: 26px;
+        background: var(--orange);
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+
+    /* ========================================
+       SHARED: CARD SURFACE
+    ======================================== */
+    .card-surface {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ========================================
+       SHARED: SECTION HEADER
+    ======================================== */
+    .sec-header {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--text-h);
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sec-header::before {
+        content: '';
+        display: block;
+        width: 3px; height: 17px;
+        background: var(--orange);
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
+    /* ========================================
+       SHARED: TABLE
+    ======================================== */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead tr {
+        background: #1a1e2a;
+    }
+
+    .data-table th {
+        padding: 12px 14px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.55);
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        white-space: nowrap;
+    }
+
+    .data-table th:first-child { border-radius: 8px 0 0 8px; }
+    .data-table th:last-child  { border-radius: 0 8px 8px 0; }
+
+    .data-table td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13.5px;
+        color: var(--text-b);
+        font-weight: 500;
+    }
+
+    .data-table tbody tr { transition: background 0.13s; }
+    .data-table tbody tr:hover { background: #fafbff; }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ========================================
+       SHARED: BADGES
+    ======================================== */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .badge-active    { background: var(--green-soft); color: var(--green);  border: 1px solid #bbf7d0; }
+    .badge-inactive  { background: #f8fafc;           color: #64748b;       border: 1px solid #e2e8f0; }
+    .badge-suspended { background: var(--red-soft);   color: var(--red);    border: 1px solid #fecaca; }
+    .badge-manager   { background: #fff7ed;           color: #c2410c;       border: 1px solid #fed7aa; }
+    .badge-employee  { background: var(--blue-soft);  color: var(--blue);   border: 1px solid #bfdbfe; }
+
+    /* ========================================
+       SHARED: BUTTONS
+    ======================================== */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        font-family: 'Nunito', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: var(--t);
+        white-space: nowrap;
+    }
+
+    .btn-orange {
+        background: var(--orange);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(255,102,0,0.28);
+    }
+    .btn-orange:hover {
+        background: var(--orange-h);
+        box-shadow: 0 4px 14px rgba(255,102,0,0.38);
+        transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+        background: var(--bg);
+        color: var(--text-b);
+        border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+        background: var(--white);
+        border-color: var(--border-2);
+        transform: translateY(-1px);
+    }
+
+    .btn-red {
+        background: var(--red-soft);
+        color: var(--red);
+        border: 1px solid #fecaca;
+    }
+    .btn-red:hover {
+        background: var(--red);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .btn-green {
+        background: var(--green-soft);
+        color: var(--green);
+        color: var(--green);
+        border: 1px solid #bbf7d0;
+    }
+    .btn-green:hover {
+        background: var(--green);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* ========================================
+       SHARED: MODAL
+    ======================================== */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15,17,23,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 28px 30px;
+        width: 520px;
+        max-width: 96vw;
+        max-height: 88vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        animation: slideUp 0.2s ease;
+        position: relative;
+    }
+
+    .modal-box::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--orange);
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(12px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--text-h);
+    }
+
+    .modal-close {
+        width: 30px; height: 30px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        font-size: 15px;
+        color: var(--text-s);
+        transition: var(--t);
+        flex-shrink: 0;
+    }
+
+    .modal-close:hover {
+        background: var(--red-soft);
+        border-color: #fecaca;
+        color: var(--red);
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+    }
+
+    /* ========================================
+       SHARED: FORM FIELDS
+    ======================================== */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field label, label.lbl {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-s);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+    }
+
+    .field input, .field select, .field textarea,
+    input.inp, select.inp, textarea.inp {
+        padding: 10px 13px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+        color: var(--text-b);
+        font-family: 'Nunito', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        outline: none;
+        transition: var(--t);
+        width: 100%;
+    }
+
+    .field input:focus, .field select:focus, .field textarea:focus,
+    input.inp:focus, select.inp:focus, textarea.inp:focus {
+        border-color: var(--orange);
+        background: var(--white);
+        box-shadow: 0 0 0 3px rgba(255,102,0,0.10);
+    }
+
+    .field input::placeholder, textarea::placeholder { color: var(--text-p); }
+    .field textarea { resize: none; height: 82px; }
+
+    /* ========================================
+       SCROLLBAR
+    ======================================== */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+
+
+
+        /* ── Nav nav ── */
+.sidebar-nav {
+  list-style: none;
+  flex: 1;
+  padding: 14px 11px;
+  overflow-y: auto;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 6px; }
+
+.sidebar-nav li { margin-bottom: 2px; }
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  text-decoration: none;
+  color: rgba(255,255,255,0.95);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--t);
+}
+
+.sidebar-nav a:hover {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+}
+
+.sidebar-menu a.active {
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Logout ── */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 11px 14px;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--r-sm);
+  color: rgba(255,255,255,0.92);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: var(--t);
+}
+
+.logout-btn:hover {
+  background: rgba(220,38,38,0.12);
+  border-color: rgba(220,38,38,0.35);
+  color: #f87171;
+}
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h2>Super Admin</h2>
+        <p>Restaurant Management</p>
+    </div>
+
+    <nav class="sidebar-nav">
+        <label>Menu</label>
+
+        <a href="{{ url_for('super_admin_dashboard') }}"
+           class="{% if request.endpoint == 'super_admin_dashboard' %}active{% endif %}">
+            <span class="icon">🏠</span> Dashboard
+        </a>
+
+        <a href="{{ url_for('add_staff') }}"
+           class="{% if request.endpoint == 'add_staff' %}active{% endif %}">
+            <span class="icon">➕</span> Add Staff
+        </a>
+
+        <a href="{{ url_for('manage_staff') }}"
+           class="{% if request.endpoint == 'manage_staff' %}active{% endif %}">
+            <span class="icon">👥</span> Manage Staff
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="{{ url_for('logout') }}">
+            <span>🚪</span> Logout
+        </a>
+    </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<div class="main-content">
+    {% block content %}{% endblock %}
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "User/user_base.html" %}
+{% block title %}My Table Bookings | Fusion Feast{% endblock %}
+
+{% block content %}
+
+<div class="page-title">📅 My Table Bookings</div>
+<p style="font-size:0.85rem; color:var(--text-sub); margin-top:-20px; margin-bottom:24px;">Manage all your restaurant table reservations</p>
+
+<div class="filters fade-in">
+    <button class="filter-btn active" onclick="filterBookings('all', this)">All</button>
+    <button class="filter-btn" onclick="filterBookings('Booked', this)">Active</button>
+    <button class="filter-btn" onclick="filterBookings('Cancelled', this)">Cancelled</button>
+</div>
+
+<div id="bookingsList" style="display:flex; flex-direction:column; gap:14px;">
+{% if bookings %}
+    {% for booking in bookings %}
+    <div class="booking-card fade-in" data-status="{{ booking.booking_status }}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+            <div>
+                <div class="order-id">Table <span>#{{ booking.table_number }}</span>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">· Booking #{{ booking.booking_id }}</span>
+                </div>
+                <div style="margin-top:6px;">
+                    <span class="status-pill {{ booking.booking_status }}">
+                        <span class="status-dot {% if booking.booking_status == 'Booked' %}pulse{% endif %}"></span>
+                        {{ booking.booking_status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="booking-info-grid">
+            <div class="booking-info-item">
+                <div class="bi-label">Date</div>
+                <div class="bi-value">{{ booking.booking_date }}</div>
+            </div>
+            <div class="booking-info-item">
+                <div class="bi-label">Time</div>
+                <div class="bi-value">{{ booking.booking_time }}</div>
+            </div>
+            <div class="booking-info-item">
+                <div class="bi-label">Guests</div>
+                <div class="bi-value">{{ booking.guests }}</div>
+            </div>
+            <div class="booking-info-item">
+                <div class="bi-label">Payment</div>
+                <div class="bi-value" style="color:{% if booking.payment_status == 'Paid' %}var(--green){% else %}var(--yellow){% endif %};">
+                    {{ booking.payment_status }}
+                </div>
+            </div>
+        </div>
+
+        <div class="booking-actions">
+            {% if booking.booking_status == "Booked" %}
+                {% if booking.can_order %}
+                <a href="/order-from-table/{{ booking.booking_id }}" class="btn">🍽️ Order From Table</a>
+                {% endif %}
+                {% if booking.can_cancel %}
+                <a href="/cancel_booking/{{ booking.booking_id }}" class="btn-cancel"
+                   onclick="return confirm('Cancel this booking?')">Cancel Booking</a>
+                {% else %}
+                <span style="font-size:0.75rem; color:var(--text-muted); padding:8px 0;">⏰ Cancellation window closed</span>
+                {% endif %}
+            {% else %}
+                <span style="font-size:0.75rem; color:var(--text-muted);">✕ Booking Cancelled</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="empty-state glass-card">
+    <div class="empty-icon">🪑</div>
+    <p>No table bookings yet</p>
+    <a href="{{ url_for('table_booking') }}" class="btn" style="margin-top:18px;">Book a Table</a>
+</div>
+{% endif %}
+</div>
+
+<div id="noResults" class="no-results" style="display:none;">No bookings match this filter.</div>
+
+<script>
+function filterBookings(status, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const cards=document.querySelectorAll('.booking-card');
+    let found=0;
+    cards.forEach(c=>{
+        if(status==='all'||c.dataset.status===status){c.style.display='';found++;}
+        else c.style.display='none';
+    });
+    document.getElementById('noResults').style.display=found===0?'block':'none';
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,450 @@
+{% extends "admin/base_superadmin.html" %}
+{% block title %}Manage Staff{% endblock %}
+{% block content %}
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins', sans-serif;
+}
+
+/* ===== MAIN ===== */
+
+.main{
+    margin-left:-40px;
+    margin-top:-40px;
+    padding:40px;
+    background:#ffffff;
+    min-height:100vh;
+}
+
+.main h1{
+    font-size:30px;
+    margin-bottom:30px;
+    color:#222;
+}
+
+/* ===== SEARCH ===== */
+
+.search-box{
+    margin-bottom:30px;
+}
+
+.search-box input{
+    padding:12px;
+    width:320px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#ffffff;
+    color:#222;
+}
+
+.search-box input:focus{
+    outline:none;
+    border-color:#FF6600;
+}
+
+.search-box button{
+    padding:12px 25px;
+    background:#FF6600;
+    border:none;
+    border-radius:8px;
+    color:white;
+    cursor:pointer;
+    margin-left:10px;
+    transition:0.3s;
+}
+
+.search-box button:hover{
+    background:#e65c00;
+}
+
+/* ===== GRID ===== */
+
+.staff-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:30px;
+}
+
+/* ===== CARD ===== */
+
+.card{
+    background:#ffffff;
+    padding:25px;
+    border-radius:12px;
+    border-bottom:5px solid #FF6600;
+    box-shadow:0 5px 15px rgba(0,0,0,0.1);
+    transition:0.3s;
+}
+
+.card:hover{
+    background:#FFF7F0;
+    transform:translateY(-6px);
+    box-shadow:0 10px 20px rgba(255,102,0,0.35);
+}
+
+.card h3{
+    color:#FF6600;
+    margin-bottom:15px;
+}
+
+.card p{
+    margin:6px 0;
+    font-size:14px;
+    color:#555;
+}
+
+/* ===== BADGES ===== */
+
+.badge{
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+    margin-right:5px;
+}
+
+.paid{ background:#28a745; color:white; }
+.pending{ background:#FF6600; color:white; }
+
+/* ===== BUTTONS ===== */
+
+.btn{
+    padding:8px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    margin-top:12px;
+    margin-right:5px;
+    font-size:13px;
+}
+
+.btn-update{ background:#17a2b8; color:white; }
+.btn-pay{ background:#28a745; color:white; }
+.btn-delete{ background:#dc3545; color:white; }
+
+/* ===== MODAL ===== */
+
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+}
+
+.modal-box{
+    background:#ffffff;
+    padding:30px;
+    border-radius:12px;
+    width:420px;
+    max-height:90vh;       /* allows full form visibility */
+    overflow-y:auto;       /* enables scroll if fields exceed screen */
+    border-bottom:5px solid #FF6600;
+}
+
+.modal-box h2{
+    margin-bottom:15px;
+    color:#222;
+}
+
+.modal-box input,
+.modal-box select{
+    width:100%;
+    padding:10px;
+    margin-bottom:12px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    background:#ffffff;
+    color:#222;
+}
+
+.modal-box input:focus,
+.modal-box select:focus{
+    outline:none;
+    border-color:#FF6600;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media(max-width:1000px){
+    .staff-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+html, body{
+    background:#ffffff;
+}
+
+    /* Staff cards container */
+.staff-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 cards in a row */
+    gap: 25px;
+    margin-top: 30px;
+}
+
+/* Individual staff card */
+.staff-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-bottom: 4px solid #ff6a00;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Hover effect */
+.staff-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 18px rgba(255,106,0,0.25);
+}
+    @media (max-width: 1200px) {
+    .staff-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .staff-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== SEARCH NOT FOUND POPUP ===== */
+
+.popup-alert{
+    position:fixed;
+    top:20px;
+    right:30px;
+    background:#ff6600;
+    color:white;
+    padding:15px 25px;
+    border-radius:8px;
+    font-weight:500;
+    box-shadow:0 6px 15px rgba(0,0,0,0.2);
+    z-index:9999;
+    animation:fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+</style>
+
+<div class="main">
+    <h1>Manage Staff</h1>
+
+    <div class="search-box">
+        <form method="GET">
+            <input type="text" name="search" placeholder="Search by ID, Name, Email, Phone, Role">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div class="staff-grid">
+    {% for s in staff %}
+        <div class="card">
+            <h3>{{ s.name }} ({{ s.role }})</h3>
+
+            <p><b>ID:</b> {{ s.user_id }}</p>
+            <p><b>Email:</b> {{ s.email }}</p>
+            <p><b>Phone:</b> {{ s.phone }}</p>
+            <p><b>Status:</b> {{ s.status }}</p>
+            <p><b>Salary:</b> ₹{{ s.salary }}</p>
+
+            {% if s.role == "Employee" %}
+            <p><b>Shift:</b> {{ s.shift }}</p>
+            <p><b>Type:</b> {{ s.employee_type }}</p>
+            {% endif %}
+
+
+            <p>
+                <span class="badge paid">Paid: {{ s.total_paid_months }}</span>
+                <span class="badge pending">Pending: {{ s.pending_months }}</span>
+            </p>
+
+            <button class="btn btn-update"
+            onclick="openModal(
+            '{{ s.user_id }}',
+            '{{ s.name }}',
+            '{{ s.phone }}',
+            '{{ s.address }}',
+            '{{ s.salary }}',
+            '{{ s.status }}',
+            '{{ s.role }}',
+            '{{ s.shift }}',
+            '{{ s.employee_type }}'
+            )">
+            Edit
+            </button>
+
+            <button class="btn btn-pay"
+                onclick="openSalaryModal('{{ s.user_id }}')">
+                Pay Salary
+            </button>
+
+            <a href="/super_admin/delete-staff/{{ s.user_id }}"
+               onclick="return confirm('Delete this staff?')">
+                <button class="btn btn-delete">Delete</button>
+            </a>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal" id="editModal">
+    <div class="modal-box">
+        <h2>Edit Staff</h2>
+
+        <form id="editForm" method="POST">
+
+            <input type="text" name="name" id="edit_name" placeholder="Name" required>
+
+            <input type="tel"
+       name="phone"
+       id="edit_phone"
+       placeholder="Phone"
+       maxlength="10"
+       pattern="[0-9]{10}"
+       inputmode="numeric"
+       required>
+
+            <input type="text" name="address" id="edit_address" placeholder="Address">
+
+            <div id="salaryField">
+                <input type="number" name="salary" id="edit_salary" placeholder="Salary">
+            </div>
+
+            <div id="shiftField">
+                <select name="shift" id="edit_shift">
+                    <option value="Morning">Morning</option>
+                    <option value="Evening">Evening</option>
+                    <option value="Night">Night</option>
+                </select>
+            </div>
+
+            <div id="typeField">
+                <select name="employee_type" id="edit_type">
+                    <option value="Cook">Cook</option>
+                    <option value="Delivery Boy">Delivery Boy</option>
+                    <option value="Waiter">Waiter</option>
+                </select>
+            </div>
+
+            <div id="passwordField">
+                <input type="password" name="password" placeholder="New Password (optional)">
+            </div>
+
+            <select name="status" id="edit_status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+            </select>
+
+            <button type="submit" class="btn btn-update">Update</button>
+            <button type="button" onclick="closeModal()" class="btn btn-delete">Cancel</button>
+
+        </form>
+    </div>
+</div>
+
+<!-- SALARY MODAL -->
+<div class="modal" id="salaryModal">
+    <div class="modal-box">
+        <h2>Pay Salary</h2>
+        <form id="salaryForm" method="POST">
+            <input type="number" name="month" min="1" max="12" placeholder="Month" required>
+            <input type="number" name="year" placeholder="Year" required>
+            <input type="number" name="bonus" placeholder="Bonus (Optional)" step="0.01">
+            <button class="btn btn-pay">Pay</button>
+            <button type="button" onclick="closeSalaryModal()" class="btn btn-delete">Cancel</button>
+        </form>
+    </div>
+</div>
+
+{% if no_result %}
+<div class="popup-alert" id="noResultPopup">
+    Person does not exist
+</div>
+{% endif %}
+
+{% if no_result %}
+<script>
+setTimeout(function(){
+    document.getElementById("noResultPopup").style.display="none";
+},3000);
+</script>
+{% endif %}
+
+<script>
+function openModal(id,name,phone,address,salary,status,role,shift,type){
+
+    const modal = document.getElementById("editModal");
+    modal.style.display="flex";
+
+    document.getElementById("edit_name").value = name || "";
+    document.getElementById("edit_phone").value = phone || "";
+    document.getElementById("edit_address").value = address || "";
+    document.getElementById("edit_status").value = status || "Active";
+
+    document.getElementById("edit_salary").value = salary || "";
+    document.getElementById("edit_shift").value = shift || "Morning";
+    document.getElementById("edit_type").value = type || "Cook";
+
+    document.getElementById("editForm").action="/super_admin/update-staff/"+id;
+
+    if(role === "Employee"){
+        document.getElementById("salaryField").style.display="block";
+        document.getElementById("shiftField").style.display="block";
+        document.getElementById("typeField").style.display="block";
+        document.getElementById("passwordField").style.display="block";
+    }
+    else{
+        document.getElementById("salaryField").style.display="none";
+        document.getElementById("shiftField").style.display="none";
+        document.getElementById("typeField").style.display="none";
+        document.getElementById("passwordField").style.display="block";
+    }
+}
+
+function closeModal(){
+    document.getElementById("editModal").style.display="none";
+}
+
+function openSalaryModal(id){
+    document.getElementById("salaryModal").style.display="flex";
+    document.getElementById("salaryForm").action="/super_admin/pay-salary/"+id;
+}
+
+function closeSalaryModal(){
+    document.getElementById("salaryModal").style.display="none";
+}
+</script>
+<script>
+document.getElementById("edit_phone").addEventListener("input", function () {
+    this.value = this.value.replace(/[^0-9]/g, ''); // allow only numbers
+
+    if (this.value.length > 10) {
+        this.value = this.value.slice(0, 10); // limit to 10 digits
+    }
+});
+</script>
+
+{% endblock %}

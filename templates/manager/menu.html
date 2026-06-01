@@ -1,0 +1,154 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Menu Management{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Menu Management</h1>
+
+<div class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <h2 class="section-title" style="margin-bottom:0;">🍽️ Menu Items</h2>
+        <button class="btn" onclick="openModal()">＋ Add Item</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in menu_items %}
+            <tr>
+                <td style="color:var(--text-p);">{{ loop.index }}</td>
+                <td>
+                    <img src="/static/uploads/{{ item.image }}"
+                         width="46" height="46"
+                         style="border-radius:8px;object-fit:cover;border:1px solid var(--border);">
+                </td>
+                <td><strong style="color:var(--text-h);">{{ item.item_name }}</strong></td>
+                <td>
+                    <span style="background:var(--orange-soft);color:var(--orange);padding:3px 10px;
+                                 border-radius:6px;font-size:12px;font-weight:700;border:1px solid var(--orange-mid);">
+                        {{ item.category_name }}
+                    </span>
+                </td>
+                <td style="font-weight:800;color:var(--orange);">₹{{ item.price }}</td>
+                <td>
+                    {% if item.status == 'Available' %}
+                    <span style="background:var(--green-soft);color:var(--green);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid #bbf7d0;">● Available</span>
+                    {% else %}
+                    <span style="background:var(--red-soft);color:var(--red);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid #fecaca;">● Unavailable</span>
+                    {% endif %}
+                </td>
+                <td style="display:flex;gap:7px;align-items:center;">
+                    <button class="btn" style="padding:5px 12px;font-size:12.5px;"
+                            onclick='openModal({
+                                "id":"{{ item.item_id }}",
+                                "name":"{{ item.item_name }}",
+                                "desc":"{{ item.description }}",
+                                "price":"{{ item.price }}",
+                                "status":"{{ item.status }}",
+                                "cat":"{{ item.category_id }}"
+                            })'>
+                        ✏️ Edit
+                    </button>
+                    <a href="/manager/delete-menu/{{ item.item_id }}"
+                       onclick="return confirm('Delete this menu item?')"
+                       style="text-decoration:none;">
+                        <button class="btn btn-danger" style="padding:5px 12px;font-size:12.5px;">
+                            🗑 Delete
+                        </button>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <h2>Add / Edit Menu Item</h2>
+
+        <form method="POST" enctype="multipart/form-data" id="menuForm">
+
+            <input type="hidden" name="item_id" id="item_id">
+
+            <div>
+                <label>Item Name</label>
+                <input type="text" name="item_name" id="item_name" placeholder="e.g. Butter Chicken" required>
+            </div>
+
+            <div>
+                <label>Category</label>
+                <select name="category_id" id="category_id">
+                    {% for cat in categories %}
+                    <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="full-width">
+                <label>Description</label>
+                <textarea name="description" id="description" placeholder="Short description…"></textarea>
+            </div>
+
+            <div>
+                <label>Price (₹)</label>
+                <input type="number" step="0.01" name="price" id="price" placeholder="0.00" required>
+            </div>
+
+            <div>
+                <label>Status</label>
+                <select name="status" id="status">
+                    <option value="Available">Available</option>
+                    <option value="Unavailable">Unavailable</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Image</label>
+                <input type="file" name="image"
+                       style="padding:8px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);width:100%;font-family:'Nunito',sans-serif;">
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-danger" onclick="closeModal()">✕ Cancel</button>
+                <button type="submit" class="btn">💾 Save Item</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(item = null) {
+    document.getElementById("menuForm").reset();
+    document.getElementById("item_id").value = "";
+
+    if (item) {
+        document.getElementById("item_id").value    = item.id;
+        document.getElementById("item_name").value  = item.name;
+        document.getElementById("description").value = item.desc;
+        document.getElementById("price").value      = item.price;
+        document.getElementById("status").value     = item.status;
+        document.getElementById("category_id").value = item.cat;
+    }
+    document.getElementById("modal").classList.add("active");
+}
+
+function closeModal() { document.getElementById("modal").classList.remove("active"); }
+
+window.onclick = e => { if (e.target === document.getElementById("modal")) closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+</script>
+
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Manage Tables{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Manage Tables</h1>
+
+<!-- ================= ADD TABLE ================= -->
+<div class="section">
+    <h2 class="section-title">➕ Add New Table</h2>
+
+    <form method="POST" action="/manager/add-table" enctype="multipart/form-data"
+          style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;align-items:flex-end;">
+
+        <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);
+                           text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                Table Number
+            </label>
+            <input type="number" name="table_number" placeholder="e.g. 5" min="1" required>
+        </div>
+
+        <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);
+                           text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                Capacity (Guests)
+            </label>
+            <input type="number" name="capacity" placeholder="e.g. 4" min="1" required>
+        </div>
+
+        <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);
+                           text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                Price Per Person (₹)
+            </label>
+            <input type="number" step="0.01" name="price_per_person" placeholder="e.g. 299" min="0" required>
+        </div>
+
+        <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);
+                           text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                Table Photo
+            </label>
+            <input type="file" name="photo" accept="image/*" required
+                   style="padding:8px 12px;background:var(--bg);border:1.5px solid var(--border);
+                          border-radius:var(--r-sm);width:100%;font-family:'Nunito',sans-serif;font-size:13px;">
+        </div>
+
+        <div style="grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn" type="submit" style="height:42px;padding:0 28px;">
+                ➕ Add Table
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- ================= TABLE LIST ================= -->
+<div class="section">
+    <h2 class="section-title">🪑 All Tables</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Table No.</th>
+                <th>Photo</th>
+                <th>Capacity</th>
+                <th>Price / Person</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for table in tables %}
+            <tr>
+                <td>
+                    <span style="font-weight:800;color:var(--orange);font-size:15px;">
+                        #{{ table.table_number }}
+                    </span>
+                </td>
+                <td>
+                    <img src="{{ url_for('static', filename='images/tables/' ~ table.photo) }}"
+                         width="64" height="52"
+                         style="border-radius:8px;object-fit:cover;border:1px solid var(--border);">
+                </td>
+                <td>
+                    <span style="font-weight:700;color:var(--text-h);">
+                        👥 {{ table.capacity }} Guests
+                    </span>
+                </td>
+                <td style="font-weight:800;color:var(--orange);">
+                    ₹{{ table.price_per_person }}
+                </td>
+                <td style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn" style="padding:5px 12px;font-size:12.5px;"
+                            onclick="openEditModal(
+                                {{ table.table_id }},
+                                {{ table.table_number }},
+                                {{ table.capacity }},
+                                '{{ table.price_per_person }}',
+                                '{{ table.photo }}'
+                            )">
+                        ✏️ Edit
+                    </button>
+                    <a href="/manager/delete-table/{{ table.table_id }}"
+                       onclick="return confirm('Delete Table #{{ table.table_number }}?\nAll higher table numbers will shift down by 1.')"
+                       style="text-decoration:none;">
+                        <button class="btn btn-danger" style="padding:5px 12px;font-size:12.5px;">
+                            🗑 Delete
+                        </button>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+
+            {% if not tables %}
+            <tr>
+                <td colspan="5" style="text-align:center;color:var(--text-s);padding:32px;">
+                    No tables added yet.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ================= EDIT MODAL ================= -->
+<div class="modal" id="editModal">
+    <div class="modal-content" style="max-width:480px;">
+        <h2>✏️ Edit Table</h2>
+
+        <form method="POST" action="/manager/edit-table" enctype="multipart/form-data">
+            <input type="hidden" name="table_id" id="edit_table_id">
+
+            <!-- Current photo preview -->
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-s);
+                               text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">
+                    Current Photo
+                </label>
+                <img id="edit_preview" src="" width="90" height="72"
+                     style="border-radius:10px;object-fit:cover;border:1px solid var(--border);">
+            </div>
+
+            <div>
+                <label>Table Number</label>
+                <input type="number" name="table_number" id="edit_table_number" min="1" required>
+            </div>
+
+            <div>
+                <label>Capacity (Guests)</label>
+                <input type="number" name="capacity" id="edit_capacity" min="1" required>
+            </div>
+
+            <div>
+                <label>Price Per Person (₹)</label>
+                <input type="number" step="0.01" name="price_per_person" id="edit_price" min="0" required>
+            </div>
+
+            <div>
+                <label>
+                    New Photo
+                    <span style="color:var(--text-s);font-size:11px;font-weight:500;">
+                        — leave blank to keep current
+                    </span>
+                </label>
+                <input type="file" name="photo" accept="image/*"
+                       style="padding:8px 12px;background:var(--bg);border:1.5px solid var(--border);
+                              border-radius:var(--r-sm);width:100%;font-family:'Nunito',sans-serif;font-size:13px;">
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-danger" onclick="closeEditModal()">✕ Cancel</button>
+                <button type="submit" class="btn">💾 Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal(id, number, capacity, price, photo) {
+    document.getElementById("edit_table_id").value     = id;
+    document.getElementById("edit_table_number").value = number;
+    document.getElementById("edit_capacity").value     = capacity;
+    document.getElementById("edit_price").value        = price;
+    document.getElementById("edit_preview").src        = "/static/images/tables/" + photo;
+    document.getElementById("editModal").classList.add("active");
+}
+
+function closeEditModal() {
+    document.getElementById("editModal").classList.remove("active");
+}
+
+window.onclick = e => {
+    if (e.target === document.getElementById("editModal")) closeEditModal();
+};
+
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeEditModal();
+});
+</script>
+
+{% endblock %}

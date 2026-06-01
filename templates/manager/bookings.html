@@ -1,0 +1,547 @@
+{% extends "manager/base_manager.html" %}
+{% block content %}
+
+<h1 class="page-title">Table Bookings Management</h1>
+
+<!-- ================= STYLES ================= -->
+<style>
+.booking-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+.booking-actions input[type="text"] {
+    flex: 1;
+    min-width: 220px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--border, #e0e0e0);
+    border-radius: 8px;
+    font-size: 13.5px;
+    background: var(--card, #fff);
+    color: var(--text-h, #111);
+    outline: none;
+    transition: border-color 0.18s;
+}
+.booking-actions input[type="text"]:focus { border-color: var(--orange, #ff6600); }
+
+.btn {
+    padding: 8px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+.today-btn   { background: var(--orange, #ff6600); color: #fff; border-color: var(--orange, #ff6600); }
+.today-btn:hover { opacity: 0.88; }
+.history-btn { background: var(--card, #f5f5f5); color: var(--text-h, #111); border-color: var(--border, #e0e0e0); }
+.history-btn:hover { background: var(--orange, #ff6600); color: #fff; border-color: var(--orange, #ff6600); }
+.btn-danger  { background: #e53935; color: #fff; border-color: #e53935; }
+.btn-danger:hover { opacity: 0.88; }
+
+.booking-table { overflow-x: auto; }
+.booking-table table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.booking-table thead tr {
+    background: var(--bg, #f7f7f7);
+    color: var(--text-s, #666);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.booking-table th, .booking-table td {
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border, #e8e8e8);
+}
+.booking-table tbody tr:hover { background: var(--bg, #fafafa); }
+
+.view-btn {
+    background: var(--card, #f5f5f5);
+    border: 1.5px solid var(--border, #ddd);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    color: var(--text-h, #111);
+}
+.view-btn:hover { background: var(--orange, #ff6600); color: #fff; border-color: var(--orange, #ff6600); }
+
+.cancel-btn {
+    background: #fff0f0;
+    color: #e53935;
+    border: 1.5px solid #ffcdd2;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.cancel-btn:hover { background: #e53935; color: #fff; border-color: #e53935; }
+
+/* Status badges */
+.badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.badge-booked    { background: #e3f2fd; color: #1565c0; }
+.badge-cancelled { background: #fce4ec; color: #c62828; }
+.badge-done      { background: #e8f5e9; color: #2e7d32; }
+.badge-paid      { background: #e8f5e9; color: #2e7d32; }
+.badge-pending   { background: #fff8e1; color: #f57f17; }
+.badge-failed    { background: #fce4ec; color: #c62828; }
+
+/* Modal overlay — self-contained, no reliance on base template */
+.bk-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.48);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.bk-modal.active       { display: flex; }
+#bkBookingModal.active { z-index: 1100; } /* sit above today/history modals */
+
+.bk-modal-content {
+    background: var(--card, #fff);
+    border-radius: 14px;
+    padding: 24px 22px 20px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    animation: bkFadeIn 0.2s ease;
+}
+@keyframes bkFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.bk-modal-content h2 { margin: 0 0 14px; font-size: 17px; color: var(--text-h, #111); }
+.bk-modal-footer      { margin-top: 18px; display: flex; justify-content: flex-end; }
+
+/* Cards in today / history list */
+.bk-card {
+    background: var(--bg, #f7f7f7);
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.bk-card-title { font-weight: 800; color: var(--text-h, #111); font-size: 14px; }
+.bk-card-sub   { font-size: 12.5px; color: var(--text-s, #666); margin-top: 3px; }
+
+/* Detail box */
+.bk-detail-box  { background: var(--bg, #f7f7f7); border: 1px solid var(--border, #e0e0e0); border-radius: 10px; padding: 14px 16px; }
+.bk-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13.5px; }
+.bk-detail-grid .full { grid-column: 1 / -1; }
+.bk-detail-label { color: var(--text-s, #888); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.bk-detail-value { color: var(--text-h, #111); font-weight: 700; }
+
+.bk-divider { border: none; border-top: 1px solid var(--border, #e0e0e0); margin: 14px 0 10px; }
+.bk-orders-label { font-size: 13px; font-weight: 700; color: var(--text-h, #111); margin-bottom: 8px; }
+
+.bk-orders-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bk-orders-table thead tr { background: var(--bg, #efefef); color: var(--text-s, #666); font-size: 11.5px; text-transform: uppercase; }
+.bk-orders-table th { padding: 5px 8px; font-weight: 700; }
+.bk-orders-table td { padding: 6px 8px; border-top: 1px solid var(--border, #e8e8e8); }
+.bk-orders-total { text-align: right; font-weight: 800; color: var(--orange, #ff6600); font-size: 14px; margin-top: 8px; }
+
+.bk-loading { color: var(--text-s, #888); padding: 14px 0; font-size: 13.5px; }
+.bk-error   { color: #e53935; padding: 14px 0; font-size: 13.5px; }
+.bk-empty   { color: var(--text-s, #888); padding: 14px 0; font-size: 13.5px; text-align: center; }
+</style>
+
+
+<!-- ================= ACTION BAR ================= -->
+<div class="booking-actions">
+    <button class="btn today-btn"   onclick="showTodaysBookings()">📅 Today's Bookings</button>
+    <input  type="text" id="searchBox"
+            placeholder="🔍  Search by ID / Name / Table / Date / Time / Status"
+            onkeyup="searchBooking()">
+    <button class="btn history-btn" onclick="showHistoryModal()">📋 History</button>
+</div>
+
+
+<!-- ================= ACTIVE BOOKINGS TABLE ================= -->
+<div class="section">
+    <h2 class="section-title">✅ Active Bookings</h2>
+    <div class="booking-table">
+        <table id="activeTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Customer</th>
+                    <th>Table</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Guests</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in active_bookings %}
+                <tr>
+                    <td><span style="font-weight:800;color:var(--orange,#ff6600);">#{{ b.booking_id }}</span></td>
+                    <td><strong style="color:var(--text-h,#111);">{{ b.name }}</strong></td>
+                    <td>{{ b.table_number }}</td>
+                    <td style="color:var(--text-s,#666);font-size:13px;">{{ b.booking_date }}</td>
+                    <td style="color:var(--text-s,#666);font-size:13px;">{{ b.booking_time }}</td>
+                    <td style="font-size:13px;">{{ b.guests }}</td>
+                    <td>
+                        {% if b.booking_status == 'Booked' %}
+                            <span class="badge badge-booked">Booked</span>
+                        {% elif b.booking_status == 'Cancelled' %}
+                            <span class="badge badge-cancelled">Cancelled</span>
+                        {% else %}
+                            <span class="badge badge-done">{{ b.booking_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="display:flex;gap:8px;align-items:center;">
+                        <button class="view-btn"   onclick="viewBooking({{ b.booking_id }})">👁 View</button>
+                        <button class="cancel-btn" onclick="cancelBooking({{ b.booking_id }})">✕ Cancel</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not active_bookings %}
+                <tr>
+                    <td colspan="8" style="text-align:center;color:var(--text-s,#888);padding:24px;">
+                        No active bookings found.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ================= MODAL: TODAY'S BOOKINGS ================= -->
+<div id="bkTodayModal" class="bk-modal">
+    <div class="bk-modal-content" style="max-width:460px;">
+        <h2>📅 Today's Bookings</h2>
+        <div id="bkTodayList"><p class="bk-loading">⏳ Loading…</p></div>
+        <div class="bk-modal-footer">
+            <button class="btn btn-danger" onclick="closeBkModal('bkTodayModal')">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: HISTORY ================= -->
+<div id="bkHistoryModal" class="bk-modal">
+    <div class="bk-modal-content" style="max-width:500px;">
+        <h2>📋 Booking History</h2>
+        <div id="bkHistoryList"><p class="bk-loading">⏳ Loading…</p></div>
+        <div class="bk-modal-footer">
+            <button class="btn btn-danger" onclick="closeBkModal('bkHistoryModal')">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: BOOKING DETAILS ================= -->
+<div id="bkBookingModal" class="bk-modal">
+    <div class="bk-modal-content" style="max-width:500px;">
+        <h2>🔖 Booking Details</h2>
+        <div id="bkBookingDetails"><p class="bk-loading">⏳ Loading…</p></div>
+        <div class="bk-modal-footer">
+            <button class="btn btn-danger" onclick="closeBkModal('bkBookingModal')">✕ Close</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= JAVASCRIPT ================= -->
+<script>
+/* ── Modal helpers ── */
+function openBkModal(id)  { document.getElementById(id).classList.add("active"); }
+function closeBkModal(id) { var el = document.getElementById(id); if (el) el.classList.remove("active"); }
+
+document.addEventListener("click", function(e) {
+    ["bkHistoryModal","bkTodayModal","bkBookingModal"].forEach(function(id) {
+        var m = document.getElementById(id);
+        if (m && e.target === m) m.classList.remove("active");
+    });
+});
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        ["bkHistoryModal","bkTodayModal","bkBookingModal"].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.remove("active");
+        });
+    }
+});
+
+/* ── Badge helpers ── */
+function statusBadge(status) {
+    if (!status) return "—";
+    var cls = { booked:"badge-booked", cancelled:"badge-cancelled", completed:"badge-done", done:"badge-done" };
+    return '<span class="badge ' + (cls[status.toLowerCase()] || "badge-booked") + '">' + status + '</span>';
+}
+function paymentBadge(status) {
+    if (!status) return "—";
+    var cls = { paid:"badge-paid", pending:"badge-pending", failed:"badge-failed" };
+    return '<span class="badge ' + (cls[status.toLowerCase()] || "badge-pending") + '">' + status + '</span>';
+}
+
+
+/* ══════════════════════════════════════════
+   VIEW BOOKING DETAILS
+══════════════════════════════════════════ */
+function viewBooking(id) {
+    document.getElementById("bkBookingDetails").innerHTML =
+        '<p class="bk-loading">⏳ Loading details…</p>';
+    openBkModal("bkBookingModal");
+
+    fetch("/manager/booking_details/" + id, { credentials: "same-origin" })
+    .then(function(res) {
+        if (res.status === 403) throw new Error("Session expired. Please refresh the page and log in again.");
+        if (!res.ok) throw new Error("Server error (HTTP " + res.status + "). Please try again.");
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.error) {
+            document.getElementById("bkBookingDetails").innerHTML =
+                '<p class="bk-error">❌ ' + data.error + '</p>';
+            return;
+        }
+
+        var b          = data.booking;
+        var rawItems   = data.items || [];
+        var orderTotal = data.total  || 0;
+
+        /* Merge duplicate item rows (same item can appear across multiple orders) */
+        var mergedMap = {};
+        rawItems.forEach(function(i) {
+            if (mergedMap[i.item_name]) {
+                mergedMap[i.item_name].quantity += i.quantity;
+            } else {
+                mergedMap[i.item_name] = { item_name: i.item_name, quantity: i.quantity, price: i.price };
+            }
+        });
+        var items = Object.values(mergedMap);
+
+        /* Info grid */
+        var addressRow = b.address
+            ? '<div class="full"><div class="bk-detail-label">Address</div>' +
+              '<div class="bk-detail-value">' + b.address + '</div></div>'
+            : "";
+
+        var html =
+            '<div class="bk-detail-box"><div class="bk-detail-grid">' +
+                cell("Customer",       b.name) +
+                cell("Table",          b.table_number) +
+                cell("Date",           b.booking_date) +
+                cell("Time",           b.booking_time) +
+                cell("Guests",         b.guests || "—") +
+                cell("Booking Status", statusBadge(b.booking_status)) +
+                cell("Email",          b.email) +
+                cell("Phone",          b.phone) +
+                cell("Payment",        paymentBadge(b.payment_status)) +
+                cell("Booking Fee",    "&#8377;" + (b.total_price ? parseFloat(b.total_price).toFixed(2) : "0.00")) +
+                addressRow +
+            '</div></div>';
+
+        /* Orders sub-table */
+        html += '<hr class="bk-divider">';
+        if (items.length > 0) {
+            var rows = items.map(function(i) {
+                return '<tr>' +
+                    '<td>' + i.item_name + '</td>' +
+                    '<td style="text-align:center;">' + i.quantity + '</td>' +
+                    '<td style="text-align:right;">&#8377;' + (i.price * i.quantity).toFixed(2) + '</td>' +
+                '</tr>';
+            }).join("");
+
+            html +=
+                '<div class="bk-orders-label">🍽 Orders on this table</div>' +
+                '<table class="bk-orders-table">' +
+                    '<thead><tr>' +
+                        '<th style="text-align:left;">Item</th>' +
+                        '<th style="text-align:center;">Qty</th>' +
+                        '<th style="text-align:right;">Amount</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+                '<div class="bk-orders-total">Order Total: &#8377;' + parseFloat(orderTotal).toFixed(2) + '</div>';
+        } else {
+            html += '<p style="color:var(--text-s,#888);font-size:13px;">No orders placed on this table yet.</p>';
+        }
+
+        document.getElementById("bkBookingDetails").innerHTML = html;
+    })
+    .catch(function(err) {
+        document.getElementById("bkBookingDetails").innerHTML =
+            '<p class="bk-error">❌ Failed to load booking details. Please try again.</p>';
+        console.error("viewBooking error:", err);
+    });
+}
+
+/* tiny helper to keep the grid DRY */
+function cell(label, value) {
+    return '<div><div class="bk-detail-label">' + label + '</div>' +
+           '<div class="bk-detail-value">'  + value + '</div></div>';
+}
+
+
+/* ══════════════════════════════════════════
+   TODAY'S BOOKINGS
+══════════════════════════════════════════ */
+function showTodaysBookings() {
+    document.getElementById("bkTodayList").innerHTML =
+        '<p class="bk-loading">⏳ Loading today\'s bookings…</p>';
+    openBkModal("bkTodayModal");
+
+    fetch("/manager/todays_bookings", { credentials: "same-origin" })
+    .then(function(res) {
+        if (res.status === 403) throw new Error("Session expired. Please refresh the page and log in again.");
+        if (!res.ok) throw new Error("Server error (HTTP " + res.status + "). Please try again.");
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.error) {
+            document.getElementById("bkTodayList").innerHTML =
+                '<p class="bk-error">❌ ' + data.error + '</p>';
+            return;
+        }
+        if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById("bkTodayList").innerHTML =
+                '<p class="bk-empty">No bookings scheduled for today.</p>';
+            return;
+        }
+
+        var html = data.map(function(b) {
+            var guestStr = b.guests ? " &bull; " + b.guests + " guest" + (b.guests > 1 ? "s" : "") : "";
+            return '<div class="bk-card">' +
+                '<div>' +
+                    '<div class="bk-card-title">' +
+                        '<span style="color:var(--orange,#ff6600);">#' + b.booking_id + '</span>' +
+                        ' &mdash; Table ' + b.table_number +
+                    '</div>' +
+                    '<div class="bk-card-sub">' +
+                        (b.name || "") + ' &bull; ' + b.booking_time + guestStr +
+                        ' &bull; ' + statusBadge(b.booking_status) +
+                    '</div>' +
+                '</div>' +
+                '<button class="view-btn" onclick="viewBooking(' + b.booking_id + ')">👁 View</button>' +
+            '</div>';
+        }).join("");
+
+        document.getElementById("bkTodayList").innerHTML = html;
+    })
+    .catch(function(err) {
+        document.getElementById("bkTodayList").innerHTML =
+            '<p class="bk-error">❌ ' + (err.message || "Failed to load today\'s bookings. Please try again.") + '</p>';
+        console.error("showTodaysBookings error:", err);
+    });
+}
+
+
+/* ══════════════════════════════════════════
+   HISTORY BOOKINGS
+══════════════════════════════════════════ */
+function showHistoryModal() {
+    document.getElementById("bkHistoryList").innerHTML =
+        '<p class="bk-loading">⏳ Loading history…</p>';
+    openBkModal("bkHistoryModal");
+
+    fetch("/manager/history_bookings", { credentials: "same-origin" })
+    .then(function(res) {
+        if (res.status === 403) throw new Error("Session expired. Please refresh the page and log in again.");
+        if (!res.ok) throw new Error("Server error (HTTP " + res.status + "). Please try again.");
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.error) {
+            document.getElementById("bkHistoryList").innerHTML =
+                '<p class="bk-error">❌ ' + data.error + '</p>';
+            return;
+        }
+        if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById("bkHistoryList").innerHTML =
+                '<p class="bk-empty">No booking history found.</p>';
+            return;
+        }
+
+        var html = data.map(function(b) {
+            return '<div class="bk-card">' +
+                '<div>' +
+                    '<div class="bk-card-title">' +
+                        '<span style="color:var(--orange,#ff6600);">#' + b.booking_id + '</span>' +
+                        ' &mdash; ' + b.name +
+                    '</div>' +
+                    '<div class="bk-card-sub">' +
+                        'Table ' + b.table_number +
+                        ' &bull; ' + b.booking_date +
+                        ' &bull; ' + b.booking_time +
+                        ' &bull; ' + statusBadge(b.booking_status) +
+                    '</div>' +
+                '</div>' +
+                '<button class="view-btn" onclick="viewBooking(' + b.booking_id + ')">👁 View</button>' +
+            '</div>';
+        }).join("");
+
+        document.getElementById("bkHistoryList").innerHTML = html;
+    })
+    .catch(function(err) {
+        document.getElementById("bkHistoryList").innerHTML =
+            '<p class="bk-error">❌ ' + (err.message || "Failed to load history. Please try again.") + '</p>';
+        console.error("showHistoryModal error:", err);
+    });
+}
+
+
+/* ══════════════════════════════════════════
+   CANCEL BOOKING
+══════════════════════════════════════════ */
+function cancelBooking(id) {
+    if (!confirm("Cancel booking #" + id + "? This cannot be undone.")) return;
+
+    fetch("/manager/cancel_booking", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ booking_id: id })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.status === "success") {
+            alert("✅ Booking #" + id + " cancelled.");
+            location.reload();
+        } else {
+            alert("❌ " + (data.message || "Could not cancel booking."));
+        }
+    })
+    .catch(function() {
+        alert("❌ Network error. Please try again.");
+    });
+}
+
+
+/* ══════════════════════════════════════════
+   SEARCH (live-filter active table rows)
+══════════════════════════════════════════ */
+function searchBooking() {
+    var q = document.getElementById("searchBox").value.toLowerCase().trim();
+    document.querySelectorAll("#activeTable tbody tr").forEach(function(row) {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none";
+    });
+}
+</script>
+
+{% endblock %}

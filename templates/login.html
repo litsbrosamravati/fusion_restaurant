@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Fusion Feast</title>
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+
+<div class="login-container">
+
+    <!-- LEFT SIDE -->
+    <div class="login-left">
+        <div class="brand-box">
+            <img src="/static/images/logo.jpg" alt="Logo">
+            <h1>Fusion Feast</h1>
+            <p>Where Flavors Unite</p>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="login-right">
+        <div class="form-box">
+            <h2>Welcome Back</h2>
+
+            <form method="POST" action="/login">
+
+<label>Select Role</label>
+<select name="role" required>
+    <option value="">-- Select Role --</option>
+    <option value="admin">Admin</option>
+    <option value="employee">Employee</option>
+    <option value="customer">Customer</option>
+</select>
+
+<label>User ID / Email</label>
+<input type="text" name="username" required>
+
+<label>Password</label>
+<input type="password" name="password" required>
+
+
+                <button type="submit">Login</button>
+
+            </form>
+
+            <div class="register-link">
+                <p>First time visiting?</p>
+                <a href="/register">Register Now</a>
+            </div>
+
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

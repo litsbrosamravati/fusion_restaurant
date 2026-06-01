@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Fusion Feast{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">
+        <img src="/static/images/logo.jpg" alt="Fusion Feast">
+        <h1>Fusion Feast</h1>
+    </div>
+    <ul class="nav-links">
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('view_menu') }}">Menu</a></li>
+        <li><a href="{{ url_for('login') }}">Order Online</a></li>
+        <li><a href="{{ url_for('login') }}">Login</a></li>
+    </ul>
+</nav>
+
+<!-- MAIN CONTENT -->
+{% block content %}{% endblock %}
+
+<!-- EXTRA JS -->
+{% block extra_js %}{% endblock %}
+
+<!-- PAYMENT NOTIFICATION MODAL -->
+<div id="paymentNotification" class="notification-modal" style="display:none;">
+    <div class="notification-box">
+        <h3>✅ Payment Successful!</h3>
+        <p>Your order has been placed successfully.</p>
+        <button id="viewReceiptBtn" class="notification-btn">View Receipt</button>
+        <button id="downloadReceiptBtn" class="notification-btn">Download Receipt</button>
+        <button onclick="closeNotification()" class="notification-btn close-btn">Close</button>
+    </div>
+</div>
+
+<style>
+.notification-modal {
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    display:flex; justify-content:center; align-items:center;
+    z-index:9999;
+}
+.notification-box {
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    text-align:center;
+    width:300px;
+}
+.notification-btn {
+    margin:5px; padding:10px 18px;
+    background-color:#F37254; color:white;
+    border:none; border-radius:6px; cursor:pointer;
+    font-weight:bold;
+}
+.notification-btn:hover { background-color:#d35400; }
+.close-btn { background-color:#555; }
+.close-btn:hover { background-color:#333; }
+</style>
+
+<script>
+function showNotification(order_id){
+    document.getElementById("viewReceiptBtn").onclick = () => { window.open(`/receipt/${order_id}`, "_blank"); };
+    document.getElementById("downloadReceiptBtn").onclick = () => { window.open(`/download_receipt/${order_id}`, "_blank"); };
+    document.getElementById("paymentNotification").style.display = "flex";
+}
+function closeNotification(){ document.getElementById("paymentNotification").style.display = "none"; }
+</script>
+
+</body>
+</html>

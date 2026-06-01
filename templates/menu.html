@@ -1,0 +1,1006 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/menu.css">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<style>
+:root {
+    --red:         #7b1e1e;
+    --red-deep:    #5c1515;
+    --orange:      #e8612a;
+    --orange-lt:   #f4834f;
+    --orange-pale: #fff1eb;
+    --gold:        #c9943a;
+    --gold-lt:     #e8b96a;
+    --cream:       #fdf8f3;
+    --cream-dk:    #f0e6da;
+    --white:       #ffffff;
+    --txt:         #1a0e0e;
+    --txt-mid:     #4a3030;
+    --txt-soft:    #9a7a6a;
+    --border:      rgba(123,30,30,0.1);
+    --border-o:    rgba(232,97,42,0.22);
+
+    --ff-d: 'Playfair Display', Georgia, serif;
+    --ff-b: 'Plus Jakarta Sans', sans-serif;
+    --spring: cubic-bezier(0.34,1.56,0.64,1);
+    --ease:   cubic-bezier(0.22,1,0.36,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.menu-page {
+    background: var(--cream);
+    min-height: 100vh;
+    font-family: var(--ff-b);
+}
+
+/* ══════════════════════════════════════
+   IMAGE STRIP — auto-scrolling marquee
+══════════════════════════════════════ */
+.strip-wrap {
+    width: 100%;
+    overflow: hidden;
+    background: var(--red-deep);
+    position: relative;
+    height: 220px;
+    border-bottom: 3px solid var(--orange);
+}
+
+/* subtle dark vignette on both sides — crisp, no blur */
+.strip-wrap::before,
+.strip-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 120px;
+    z-index: 2;
+    pointer-events: none;
+}
+.strip-wrap::before {
+    left: 0;
+    background: linear-gradient(to right, var(--red-deep) 0%, transparent 100%);
+}
+.strip-wrap::after {
+    right: 0;
+    background: linear-gradient(to left, var(--red-deep) 0%, transparent 100%);
+}
+
+.strip-track {
+    display: flex;
+    gap: 10px;
+    width: max-content;
+    animation: marquee 28s linear infinite;
+    height: 100%;
+    align-items: center;
+    padding: 0 5px;
+}
+
+.strip-track:hover { animation-play-state: paused; }
+
+@keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+.strip-img {
+    width: 180px;
+    height: 200px;
+    border-radius: 14px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.08);
+    transition: transform 0.35s var(--ease), border-color 0.3s ease;
+    display: block;
+}
+
+.strip-img:hover {
+    transform: scale(1.06) translateY(-4px);
+    border-color: var(--orange);
+}
+
+/* ══════════════════════════════════════
+   COMPACT HEADING SECTION
+══════════════════════════════════════ */
+.menu-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 6% 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--cream);
+    position: relative;
+}
+
+/* left accent line */
+.menu-heading::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--red), var(--orange));
+}
+
+.heading-left { display: flex; flex-direction: column; gap: 4px; }
+
+.heading-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--orange);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.heading-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1.5px;
+    background: var(--orange);
+}
+
+.heading-title {
+    font-family: var(--ff-d);
+    font-size: clamp(26px, 4vw, 42px);
+    font-weight: 800;
+    color: var(--red);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.heading-title em {
+    font-style: italic;
+    background: linear-gradient(110deg, var(--orange) 0%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.heading-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-shrink: 0;
+}
+
+.stat-chip {
+    text-align: center;
+}
+
+.stat-chip .val {
+    font-family: var(--ff-d);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--red);
+    line-height: 1;
+}
+.stat-chip .val span { color: var(--orange); }
+
+.stat-chip .lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--txt-soft);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.stat-sep {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+}
+
+/* ══════════════════════════════════════
+   MENU GRID
+══════════════════════════════════════ */
+.menu-body {
+    padding: 28px 6% 100px;
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 20px;
+}
+
+/* ══════════════════════════════════════
+   CARD — image-forward, no white overlay
+══════════════════════════════════════ */
+.menu-card {
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(28px);
+    animation: cardIn 0.6s var(--spring) forwards;
+    transition:
+        transform 0.35s var(--spring),
+        box-shadow 0.35s var(--ease);
+    background: #1a0a0a;   /* dark base, visible while image loads */
+    box-shadow: 0 4px 20px rgba(26,8,8,0.25);
+    /* NO white overlay anywhere */
+}
+
+/* stagger */
+.menu-card:nth-child(1)  { animation-delay:.06s }
+.menu-card:nth-child(2)  { animation-delay:.12s }
+.menu-card:nth-child(3)  { animation-delay:.18s }
+.menu-card:nth-child(4)  { animation-delay:.24s }
+.menu-card:nth-child(5)  { animation-delay:.30s }
+.menu-card:nth-child(6)  { animation-delay:.36s }
+.menu-card:nth-child(7)  { animation-delay:.42s }
+.menu-card:nth-child(8)  { animation-delay:.48s }
+.menu-card:nth-child(9)  { animation-delay:.54s }
+.menu-card:nth-child(n+10){ animation-delay:.58s }
+
+@keyframes cardIn {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.menu-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 18px 48px rgba(123,30,30,0.3), 0 4px 16px rgba(232,97,42,0.18);
+}
+
+/* ── image fills the card ── */
+.card-img {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s var(--ease);
+}
+
+.menu-card:hover .card-img { transform: scale(1.06); }
+
+/* ── solid gradient overlay (NOT white, NOT blurry) ── */
+/* Dark-to-transparent from bottom so text sits cleanly on image */
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(26,6,6,0.92) 0%,
+        rgba(26,6,6,0.55) 38%,
+        rgba(26,6,6,0.10) 65%,
+        transparent        100%
+    );
+    pointer-events: none;
+}
+
+/* ── hover state: slightly more visible overlay ── */
+.menu-card:hover .card-overlay {
+    background: linear-gradient(
+        to top,
+        rgba(26,6,6,0.96) 0%,
+        rgba(26,6,6,0.65) 42%,
+        rgba(26,6,6,0.18) 68%,
+        transparent        100%
+    );
+}
+
+/* ── top badges ── */
+.card-top {
+    position: absolute;
+    top: 12px;
+    left: 12px; right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 3;
+}
+
+.badge-index {
+    width: 30px; height: 30px;
+    background: rgba(0,0,0,0.55);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--ff-d);
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    transition: all 0.3s var(--spring);
+}
+
+.menu-card:hover .badge-index {
+    background: var(--orange);
+    border-color: var(--orange);
+    transform: scale(1.15);
+}
+
+.badge-veg {
+    width: 24px; height: 24px;
+    background: rgba(0,0,0,0.55);
+    border: 1.5px solid #21a84b;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.badge-veg::after {
+    content: '';
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #21a84b;
+}
+
+/* ── bottom content on image ── */
+.card-content {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0 16px 18px;
+    z-index: 3;
+}
+
+.card-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-lt);
+    background: rgba(201,148,58,0.18);
+    border: 1px solid rgba(201,148,58,0.35);
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 8px;
+}
+
+.card-name {
+    font-family: var(--ff-d);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+    transition: color 0.25s ease;
+}
+
+.menu-card:hover .card-name { color: var(--gold-lt); }
+
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* price */
+.card-price {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+
+.price-sym {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--orange-lt);
+    font-family: var(--ff-b);
+    line-height: 1;
+}
+
+.price-num {
+    font-family: var(--ff-d);
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+/* add button */
+.add-btn {
+    position: relative;
+    overflow: hidden;
+    padding: 9px 18px;
+    border-radius: 100px;
+    border: none;
+    background: linear-gradient(135deg, var(--red) 0%, var(--orange) 100%);
+    color: #fff;
+    font-family: var(--ff-b);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    outline: none;
+    box-shadow: 0 4px 14px rgba(232,97,42,0.45);
+    transition: transform 0.25s var(--spring), box-shadow 0.25s ease;
+    flex-shrink: 0;
+}
+
+.add-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--red) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.add-btn span { position: relative; z-index: 1; }
+.add-btn:hover::before { opacity: 1; }
+.add-btn:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(232,97,42,0.55); }
+.add-btn:active { transform: scale(0.94); }
+
+/* ripple */
+.rip {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.38);
+    transform: scale(0);
+    animation: rip 0.5s linear;
+    pointer-events: none;
+    z-index: 2;
+}
+@keyframes rip { to { transform: scale(5); opacity: 0; } }
+
+/* ══════════════════════════════════════
+   FLOATING CART
+══════════════════════════════════════ */
+.cart-float {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    color: #fff;
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 900;
+    box-shadow: 0 8px 28px rgba(123,30,30,0.4);
+    border: 3px solid rgba(255,255,255,0.18);
+    transition: transform 0.3s var(--spring), box-shadow 0.3s ease;
+}
+.cart-float:hover {
+    transform: scale(1.12) translateY(-3px);
+    box-shadow: 0 14px 38px rgba(232,97,42,0.45);
+}
+
+#cart-count {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: var(--gold);
+    color: var(--txt);
+    font-family: var(--ff-b);
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 20px; height: 20px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--white);
+    transition: transform 0.3s var(--spring);
+}
+.cart-float:hover #cart-count { transform: scale(1.2); }
+
+/* ══════════════════════════════════════
+   MODALS — solid overlay, no blur
+══════════════════════════════════════ */
+.cart-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,8,8,0.78);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: ov 0.22s ease;
+}
+@keyframes ov { from { opacity: 0; } to { opacity: 1; } }
+
+.cart-box {
+    background: var(--white);
+    border-radius: 22px;
+    width: min(480px, 92vw);
+    max-height: 86vh;
+    overflow-y: auto;
+    animation: bx 0.38s var(--spring) forwards;
+    border: 1px solid var(--border-o);
+    box-shadow: 0 28px 70px rgba(0,0,0,0.28);
+}
+@keyframes bx {
+    from { opacity: 0; transform: scale(0.93) translateY(22px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cart-box::before {
+    content: '';
+    display: block;
+    height: 4px;
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--gold));
+    border-radius: 22px 22px 0 0;
+}
+
+.modal-inner { padding: 24px 26px 28px; }
+
+.modal-inner h3 {
+    font-family: var(--ff-d);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 4px;
+}
+
+.modal-sub { font-size: 13px; color: var(--txt-soft); margin-bottom: 20px; }
+
+/* cart rows */
+.cart-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.cart-row .iname {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--txt);
+}
+
+.qty-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 2px 7px;
+}
+.qty-wrap button {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    color: var(--red);
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s ease;
+    line-height: 1;
+}
+.qty-wrap button:hover { background: var(--red); color: #fff; transform: scale(1.1); }
+
+.qty-num { font-size: 13px; font-weight: 700; color: var(--txt); min-width: 16px; text-align: center; }
+.iprice  { font-family: var(--ff-d); font-size: 15px; font-weight: 700; color: var(--orange); min-width: 60px; text-align: right; }
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 20px;
+}
+.total-row .tlbl { font-size: 13px; font-weight: 600; color: var(--txt-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+.total-row .tval { font-family: var(--ff-d); font-size: 28px; font-weight: 800; color: var(--red); }
+.total-row .tval::before { content: '₹'; font-size: 16px; color: var(--orange); font-family: var(--ff-b); vertical-align: super; margin-right: 2px; }
+
+.cart-empty { text-align: center; padding: 36px 0; color: var(--txt-soft); font-size: 14px; }
+.cart-empty .ico { font-size: 38px; margin-bottom: 8px; }
+
+.mbtn-p {
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    color: #fff;
+    font-family: var(--ff-b);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 9px;
+    box-shadow: 0 5px 20px rgba(123,30,30,0.22);
+    transition: transform 0.22s var(--spring), box-shadow 0.22s ease;
+}
+.mbtn-p:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(232,97,42,0.38); }
+.mbtn-p:active { transform: scale(0.97); }
+
+.mbtn-s {
+    width: 100%;
+    padding: 12px;
+    border-radius: 11px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--txt-soft);
+    font-family: var(--ff-b);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.mbtn-s:hover { border-color: var(--red); color: var(--red); }
+
+/* inputs */
+.igrp { position: relative; margin-bottom: 12px; }
+.igrp input {
+    width: 100%;
+    padding: 13px 14px 13px 42px;
+    border: 1.5px solid var(--border);
+    border-radius: 11px;
+    font-family: var(--ff-b);
+    font-size: 14px;
+    color: var(--txt);
+    background: var(--cream);
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.igrp input:focus { border-color: var(--orange); background: var(--white); box-shadow: 0 0 0 3px rgba(232,97,42,0.11); }
+.igrp input::placeholder { color: #c0a8a8; }
+.iico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
+
+/* success */
+#paymentNotification {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,8,8,0.8);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    animation: ov 0.22s ease;
+}
+
+.succ-box {
+    background: var(--white);
+    border-radius: 24px;
+    width: min(400px, 90vw);
+    overflow: hidden;
+    animation: bx 0.45s var(--spring) forwards;
+    box-shadow: 0 28px 70px rgba(0,0,0,0.28);
+    border: 1px solid var(--border-o);
+}
+
+.succ-top {
+    background: linear-gradient(135deg, var(--red) 0%, var(--orange) 100%);
+    padding: 36px 28px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.succ-top::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.succ-ico {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    border: 2.5px solid rgba(255,255,255,0.5);
+    margin: 0 auto 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    position: relative; z-index: 1;
+    animation: pop 0.5s 0.15s var(--spring) both;
+}
+@keyframes pop { from { transform: scale(0) rotate(-15deg); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.succ-top h2 { font-family: var(--ff-d); font-size: 24px; font-weight: 700; color: #fff; position: relative; z-index: 1; }
+.succ-top p  { font-size: 13px; color: rgba(255,255,255,0.78); margin-top: 5px; position: relative; z-index: 1; }
+
+.succ-btm { padding: 22px 24px 24px; }
+
+.rbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+.bview {
+    padding: 13px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    color: #fff;
+    border: none;
+    border-radius: 11px;
+    font-family: var(--ff-b);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(123,30,30,0.2);
+    transition: all 0.22s var(--spring);
+}
+.bview:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(232,97,42,0.38); }
+
+.bdl {
+    padding: 13px;
+    background: var(--cream);
+    color: var(--red);
+    border: 1.5px solid var(--border-o);
+    border-radius: 11px;
+    font-family: var(--ff-b);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.bdl:hover { background: var(--orange-pale); border-color: var(--orange); }
+
+.bdone {
+    width: 100%;
+    padding: 11px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 11px;
+    font-family: var(--ff-b);
+    font-size: 13px;
+    color: var(--txt-soft);
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.bdone:hover { border-color: var(--red); color: var(--red); }
+
+/* responsive */
+@media(max-width:768px){
+    .menu-body   { padding: 20px 4% 90px; }
+    .menu-heading{ padding: 20px 4% 18px; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .menu-grid   { grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 14px; }
+    .strip-wrap  { height: 170px; }
+    .strip-img   { width: 140px; height: 152px; }
+    .cart-float  { bottom: 20px; right: 18px; width: 54px; height: 54px; }
+    .heading-right { gap: 14px; }
+}
+</style>
+
+<div class="menu-page">
+
+<!-- ══════════ IMAGE STRIP ══════════ -->
+<div class="strip-wrap">
+    <div class="strip-track" id="stripTrack">
+        {% for item in menu_items %}
+        <img class="strip-img" src="/static/uploads/{{ item.image }}" alt="{{ item.item_name }}" title="{{ item.item_name }}">
+        {% endfor %}
+        <!-- duplicate for seamless loop -->
+        {% for item in menu_items %}
+        <img class="strip-img" src="/static/uploads/{{ item.image }}" alt="{{ item.item_name }}">
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ══════════ COMPACT HEADING ══════════ -->
+<div class="menu-heading">
+    <div class="heading-left">
+        <span class="heading-eyebrow">Fusion Feast</span>
+        <h1 class="heading-title">Our <em>Menu</em></h1>
+    </div>
+    <div class="heading-right">
+        <div class="stat-chip">
+            <div class="val">4.<span>8</span>★</div>
+            <div class="lbl">Rating</div>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-chip">
+            <div class="val"><span>{{ menu_items|length }}</span></div>
+            <div class="lbl">Dishes</div>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-chip">
+            <div class="val"><span>100</span>%</div>
+            <div class="lbl">Fresh</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ GRID ══════════ -->
+<main class="menu-body">
+    <div class="menu-grid">
+        {% for item in menu_items %}
+        <div class="menu-card">
+            <img class="card-img" src="/static/uploads/{{ item.image }}" alt="{{ item.item_name }}">
+            <div class="card-overlay"></div>
+
+            <div class="card-top">
+                <div class="badge-index">{{ loop.index }}</div>
+            </div>
+
+            <div class="card-content">
+                <span class="card-tag">Chef's Pick</span>
+                <div class="card-name">{{ item.item_name }}</div>
+                <div class="card-footer">
+                    <div class="card-price">
+                        <span class="price-sym">₹</span>
+                        <span class="price-num">{{ item.price }}</span>
+                    </div>
+                    <button class="add-btn"
+                        onclick="addToCart('{{ item.item_id }}','{{ item.item_name }}','{{ item.price }}'); doRipple(event,this)">
+                        <span>+ Add</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</main>
+
+</div>
+
+<!-- Floating Cart -->
+<div class="cart-float" onclick="openCart()">
+    🛒<span id="cart-count">0</span>
+</div>
+
+<!-- Cart Modal -->
+<div id="cartModal" class="cart-modal">
+    <div class="cart-box">
+        <div class="modal-inner">
+            <h3>Your Order</h3>
+            <p class="modal-sub">Review before placing</p>
+            <div id="cartItems"></div>
+            <div class="total-row">
+                <span class="tlbl">Total</span>
+                <span class="tval" id="cartTotal">0.00</span>
+            </div>
+            <button class="mbtn-p" onclick="showOrderForm()">Proceed to Payment →</button>
+            <button class="mbtn-s" onclick="closeCart()">Continue Browsing</button>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Details Modal -->
+<div id="orderForm" class="cart-modal">
+    <div class="cart-box">
+        <div class="modal-inner">
+            <h3>Your Details</h3>
+            <p class="modal-sub">We'll confirm your order with these</p>
+            <div class="igrp"><span class="iico"></span><input id="custName" placeholder="Full Name" type="text"></div>
+            <div class="igrp"><span class="iico"></span><input id="custEmail" placeholder="Email Address" type="email"></div>
+            <div class="igrp"><span class="iico"></span><input id="custPhone" placeholder="Phone Number" type="tel"></div>
+            <div class="igrp"><span class="iico"></span><input id="tableNo" placeholder="Table Number" type="text"></div>
+            <button class="mbtn-p" type="button" onclick="submitOrder()">Pay Securely 🔒</button>
+            <button class="mbtn-s" onclick="document.getElementById('orderForm').style.display='none'">Back</button>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Success -->
+<div id="paymentNotification">
+    <div class="succ-box">
+        <div class="succ-top">
+            <div class="succ-ico">✓</div>
+            <h2>Order Confirmed!</h2>
+            <p>Being prepared right now</p>
+        </div>
+        <div class="succ-btm">
+            <div class="rbtns">
+                <button class="bview" id="viewReceiptBtn">View Receipt</button>
+                <button class="bdl" id="downloadReceiptBtn">Download</button>
+            </div>
+            <button class="bdone" onclick="closeNotification()">Done</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let cart = [];
+
+function doRipple(e, btn) {
+    const r = document.createElement('span');
+    r.className = 'rip';
+    const rect = btn.getBoundingClientRect();
+    const s = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX-rect.left-s/2}px;top:${e.clientY-rect.top-s/2}px;`;
+    btn.appendChild(r);
+    setTimeout(() => r.remove(), 550);
+}
+
+function addToCart(id, name, price) {
+    const item = cart.find(i => i.id == id);
+    if (item) item.qty++;
+    else cart.push({ id, name, price: parseFloat(price), qty: 1 });
+    updateCart();
+    const fab = document.querySelector('.cart-float');
+    fab.style.transform = 'scale(1.28) translateY(-4px)';
+    setTimeout(() => fab.style.transform = '', 320);
+}
+
+function updateCart() {
+    let total = 0, html = '';
+    if (!cart.length) {
+        html = `<div class="cart-empty"><div class="ico">🍽️</div>Your cart is empty</div>`;
+    } else {
+        cart.forEach((i, idx) => {
+            total += i.price * i.qty;
+            html += `<div class="cart-row">
+                <span class="iname">${i.name}</span>
+                <div class="qty-wrap">
+                    <button onclick="changeQty(${idx},-1)">−</button>
+                    <span class="qty-num">${i.qty}</span>
+                    <button onclick="changeQty(${idx},1)">+</button>
+                </div>
+                <span class="iprice">₹${(i.price*i.qty).toFixed(0)}</span>
+            </div>`;
+        });
+    }
+    document.getElementById('cartItems').innerHTML = html;
+    document.getElementById('cartTotal').textContent = total.toFixed(2);
+    document.getElementById('cart-count').textContent = cart.length;
+}
+
+function changeQty(i, val) {
+    cart[i].qty += val;
+    if (cart[i].qty <= 0) cart.splice(i, 1);
+    updateCart();
+}
+
+function openCart()    { document.getElementById('cartModal').style.display = 'flex'; }
+function closeCart()   { document.getElementById('cartModal').style.display = 'none'; }
+function showOrderForm(){ document.getElementById('orderForm').style.display = 'flex'; }
+
+function submitOrder() {
+    if (!cart.length) { alert('Cart is empty!'); return; }
+    const data = {
+        name:  document.getElementById('custName').value,
+        email: document.getElementById('custEmail').value,
+        phone: document.getElementById('custPhone').value,
+        table: document.getElementById('tableNo').value,
+        cart
+    };
+    if (!data.name || !data.email || !data.phone) { alert('Please fill all details.'); return; }
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0) * 100;
+
+    fetch('/create_order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ total, customer: data })
+    })
+    .then(r => r.json())
+    .then(order => {
+        if (order.error) { alert('Error: ' + order.error); return; }
+        new Razorpay({
+            key: "{{ razorpay_key }}",
+            amount: order.amount, currency: 'INR',
+            name: 'Fusion Feast', description: 'Order Payment',
+            order_id: order.id,
+            handler(resp) {
+                fetch('/place_visitor_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...data, payment_id: resp.razorpay_payment_id })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success' && res.order_id) {
+                        cart = []; updateCart();
+                        document.getElementById('orderForm').style.display = 'none';
+                        document.getElementById('cartModal').style.display = 'none';
+                        showNotification(res.order_id);
+                    } else { alert('Error: ' + (res.error || 'Unknown error')); }
+                });
+            },
+            prefill: { name: data.name, email: data.email, contact: data.phone },
+            theme: { color: '#e8612a' }
+        }).open();
+    })
+    .catch(err => alert('Could not create order: ' + err));
+}
+
+function showNotification(order_id) {
+    if (!order_id) return;
+    document.getElementById('viewReceiptBtn').onclick = () => window.open(`/receipt/${order_id}`, '_blank');
+    document.getElementById('downloadReceiptBtn').onclick = () => window.open(`/download_receipt/${order_id}`, '_blank');
+    document.getElementById('paymentNotification').style.display = 'flex';
+}
+
+function closeNotification() { document.getElementById('paymentNotification').style.display = 'none'; }
+</script>
+{% endblock %}

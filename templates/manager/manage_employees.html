@@ -1,0 +1,449 @@
+{% extends "manager/base_manager.html" %}
+{% block title %}Manage Employees{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════
+   CRITICAL FIX:
+   manager.css has a global rule:
+       .modal-content form { display:grid; grid-template-columns:1fr 1fr; }
+   This turns Bootstrap's entire .modal-content (header+body+footer)
+   into a 2-col grid, making the header a giant grey box on the left
+   and cramming the form on the right.
+   We reset that here so Bootstrap modals lay out normally.
+   ═══════════════════════════════════════════════════════ */
+.modal-content {
+    display: block !important; /* reset any inherited grid from manager.css */
+}
+.modal-content form {
+    display: block !important; /* Bootstrap modal's outer <form> wraps header+body+footer */
+    grid-template-columns: unset !important;
+}
+
+/* Bootstrap modal sizing */
+.modal-dialog { max-width: 560px !important; }
+.modal-dialog.modal-lg { max-width: 680px !important; }
+
+/* Style: match the site theme */
+.modal-content {
+    background: var(--white) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-lg) !important;
+    color: var(--text-b) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--orange);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    z-index: 1;
+}
+
+.modal-header {
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 16px 20px !important;
+    border-radius: var(--r-lg) var(--r-lg) 0 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.modal-title {
+    font-family: 'Nunito', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: var(--text-h) !important;
+}
+
+.modal-body {
+    background: var(--white) !important;
+    padding: 20px 24px !important;
+    display: block !important; /* ensure not grid */
+}
+
+.modal-footer {
+    background: var(--white) !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 14px 20px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+
+/* Fix: Bootstrap modal display — only show when Bootstrap adds .show class */
+.modal.fade:not(.show) {
+    display: none !important;
+    pointer-events: none;
+}
+.modal.fade.show {
+    display: block !important;
+}
+
+.modal-backdrop { background: rgba(15,17,23,0.5) !important; }
+.btn-close { filter: brightness(0.4) !important; }
+
+/* Bootstrap form inputs */
+.form-control, .form-select {
+    background: var(--bg) !important;
+    border: 1.5px solid var(--border) !important;
+    color: var(--text-b) !important;
+    border-radius: var(--r-sm) !important;
+    font-family: 'Nunito', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    padding: 9px 12px !important;
+    height: 42px;
+    width: 100% !important;
+    transition: all 0.2s ease !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--orange) !important;
+    box-shadow: 0 0 0 3px rgba(255,102,0,0.10), 0 4px 12px rgba(0,0,0,0.05) !important;
+    background: var(--white) !important;
+    transform: translateY(-1px);
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: var(--orange-mid) !important;
+}
+
+.form-control::placeholder { color: var(--text-p) !important; }
+
+/* Status badges */
+.s-active    { background:var(--green-soft); color:var(--green);  border:1px solid #bbf7d0; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+.s-inactive  { background:#f8fafc;           color:#64748b;       border:1px solid #e2e8f0; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+.s-suspended { background:var(--red-soft);   color:var(--red);    border:1px solid #fecaca; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+
+/* Add employee btn */
+.btn-primary.mb-3 {
+    background: var(--orange) !important;
+    border-color: var(--orange) !important;
+    font-family: 'Nunito', sans-serif !important;
+    font-weight: 700 !important;
+    padding: 9px 20px !important;
+    border-radius: var(--r-sm) !important;
+    box-shadow: 0 2px 8px var(--orange-glow) !important;
+}
+
+.btn-primary.mb-3:hover {
+    background: var(--orange-h) !important;
+    border-color: var(--orange-h) !important;
+}
+
+/* edit / delete in row */
+.btn-warning {
+    background: var(--orange-soft) !important;
+    color: var(--orange) !important;
+    border: 1px solid var(--orange-mid) !important;
+    font-family: 'Nunito', sans-serif !important;
+    font-weight: 700 !important;
+}
+
+.btn-warning:hover {
+    background: var(--orange) !important;
+    color: #fff !important;
+}
+
+/* bootstrap submit btn */
+.btn-success {
+    background: var(--green) !important;
+    border-color: var(--green) !important;
+    font-family: 'Nunito', sans-serif !important;
+    font-weight: 700 !important;
+}
+
+/* Form grid — used inside .modal-body only */
+.modal-body .form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+}
+
+@media (max-width: 576px) {
+    .modal-body .form-grid { grid-template-columns: 1fr !important; }
+}
+
+.modal-body .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0; /* prevent overflow in grid */
+}
+
+/* full-width field spans both columns */
+.modal-body .form-group.full-width {
+    grid-column: 1 / -1 !important;
+}
+
+/* Labels inside modal */
+.modal-body .form-group label {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: var(--text-s) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Manage Employees</h1>
+
+<div class="section">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <h2 class="section-title" style="margin-bottom:0;">👥 Employee List</h2>
+        <button class="btn btn-primary mb-3"
+                data-bs-toggle="modal"
+                data-bs-target="#addModal"
+                style="margin-bottom:0!important;">
+            ＋ Add Employee
+        </button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Shift</th>
+                <th>Type</th>
+                <th>Salary</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for emp in employees %}
+            <tr>
+                <td><span style="font-weight:800;color:var(--orange);">{{ emp.user_id }}</span></td>
+                <td><strong style="color:var(--text-h);">{{ emp.name }}</strong></td>
+                <td style="color:var(--text-s);font-size:13px;">{{ emp.email }}</td>
+                <td style="color:var(--text-s);font-size:13px;">{{ emp.phone }}</td>
+                <td style="color:var(--text-s);font-size:13px;">{{ emp.shift or '—' }}</td>
+                <td style="color:var(--text-s);font-size:13px;">{{ emp.employee_type or '—' }}</td>
+                <td style="font-weight:700;color:var(--text-h);">₹{{ emp.salary }}</td>
+                <td>
+                    {% if emp.status == 'Active' %}
+                        <span class="s-active">● Active</span>
+                    {% elif emp.status == 'Inactive' %}
+                        <span class="s-inactive">● Inactive</span>
+                    {% else %}
+                        <span class="s-suspended">● Suspended</span>
+                    {% endif %}
+                </td>
+                <td style="display:flex;gap:7px;align-items:center;">
+                    <button class="btn btn-warning btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editModal{{ emp.user_id }}">
+                        ✏️ Edit
+                    </button>
+                    <a href="/manager/delete-employee/{{ emp.user_id }}"
+                       class="btn btn-danger btn-sm"
+                       style="text-decoration:none;"
+                       onclick="return confirm('Delete this employee?')">
+                        🗑 Delete
+                    </a>
+                </td>
+            </tr>
+
+            <!-- EDIT MODAL -->
+            <div class="modal fade" id="editModal{{ emp.user_id }}" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <form action="/manager/update-employee/{{ emp.user_id }}" method="POST">
+                            <div class="modal-header">
+                                <h5 class="modal-title">✏️ Edit — {{ emp.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-grid">
+
+                                    <div class="form-group">
+                                        <label>Name</label>
+                                        <input type="text" name="name" class="form-control" value="{{ emp.name }}" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Email</label>
+                                        <input type="email" name="email" class="form-control" value="{{ emp.email }}" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Phone</label>
+                                        <input type="text" name="phone" class="form-control"
+                                               value="{{ emp.phone }}"
+                                               maxlength="10"
+                                               pattern="[0-9]{10}"
+                                               inputmode="numeric"
+                                               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Address</label>
+                                        <input type="text" name="address" class="form-control" value="{{ emp.address }}">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Salary (₹)</label>
+                                        <input type="number" name="salary" class="form-control" value="{{ emp.salary }}">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Shift</label>
+                                        <select name="shift" class="form-select">
+                                            <option value="Morning"  {% if emp.shift == "Morning"  %}selected{% endif %}>Morning</option>
+                                            <option value="Evening"  {% if emp.shift == "Evening"  %}selected{% endif %}>Evening</option>
+                                            <option value="Night"    {% if emp.shift == "Night"    %}selected{% endif %}>Night</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Employee Type</label>
+                                        <select name="employee_type" class="form-select">
+                                            <option value="Cook"         {% if emp.employee_type == "Cook"         %}selected{% endif %}>Cook</option>
+                                            <option value="Delivery Boy" {% if emp.employee_type == "Delivery Boy" %}selected{% endif %}>Delivery Boy</option>
+                                            <option value="Waiter"       {% if emp.employee_type == "Waiter"       %}selected{% endif %}>Waiter</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="status" class="form-select">
+                                            <option value="Active"    {% if emp.status == "Active"    %}selected{% endif %}>Active</option>
+                                            <option value="Inactive"  {% if emp.status == "Inactive"  %}selected{% endif %}>Inactive</option>
+                                            <option value="Suspended" {% if emp.status == "Suspended" %}selected{% endif %}>Suspended</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label>New Password <span style="font-weight:400;text-transform:none;letter-spacing:0;">(leave blank to keep current)</span></label>
+                                        <input type="password" name="password" class="form-control" placeholder="Enter new password (optional)">
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                                        style="font-family:'Nunito',sans-serif;">Cancel</button>
+                                <button type="submit" class="btn btn-success">💾 Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<!-- ADD EMPLOYEE MODAL -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="/manager/add-employee" method="POST">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">＋ Add New Employee</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="Enter full name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="email@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="text" name="phone" class="form-control"
+                                   placeholder="10-digit phone number"
+                                   maxlength="10"
+                                   pattern="[0-9]{10}"
+                                   inputmode="numeric"
+                                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Address</label>
+                            <input type="text" name="address" class="form-control" placeholder="Enter address">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Salary (₹)</label>
+                            <input type="number" name="salary" class="form-control" placeholder="Monthly salary">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Shift</label>
+                            <select name="shift" class="form-select">
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Employee Type</label>
+                            <select name="employee_type" class="form-select">
+                                <option value="Cook">Cook</option>
+                                <option value="Delivery Boy">Delivery Boy</option>
+                                <option value="Waiter">Waiter</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status" class="form-select">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                            style="font-family:'Nunito',sans-serif;">Cancel</button>
+                    <button type="submit" class="btn btn-success">＋ Add Employee</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
