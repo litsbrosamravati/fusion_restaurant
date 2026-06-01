@@ -532,7 +532,7 @@ def register():
         flash("Registration successful! Please login.")
         return redirect("/login")
 
-    return render_template("User/register.html")
+    return render_template("user/register.html")
 
 # ==============================
 # CUSTOMER DASHBOARD
@@ -630,7 +630,7 @@ def customer_dashboard():
         cursor.close()
 
     return render_template(
-        "User/dashboard_u.html",
+        "user/dashboard_u.html",
         user=user,
         orders=orders,
         bookings=bookings
@@ -734,7 +734,7 @@ def order_online():
     cursor.close()
 
     return render_template(
-        "User/order_online.html",
+        "user/order_online.html",
         menu_items=menu_items,
         customer=customer,
         cart_count=cart_count
@@ -813,7 +813,7 @@ def view_cart():
     total = sum(item["price"] * item["quantity"] for item in cart_items)
 
     return render_template(
-        "User/cart.html",
+        "user/cart.html",
         cart=cart_items,
         total=total
     )
@@ -1001,7 +1001,7 @@ def checkout():
     cursor.close()
 
     return render_template(
-        "User/pay_order.html",
+        "user/pay_order.html",
         razorpay_key=RAZORPAY_KEY_ID,
         razorpay_order_id=razorpay_order_id,
         amount=int(total * 100),
@@ -1267,7 +1267,7 @@ def table_booking():
         # OPEN PAYMENT PAGE
         # ============================================
         return render_template(
-            "User/pay_booking.html",
+            "user/pay_booking.html",
             razorpay_key=RAZORPAY_KEY_ID,
             razorpay_order_id=razorpay_order_id,
             amount=int(total_price * 100),
@@ -1281,7 +1281,7 @@ def table_booking():
     cursor.close()
 
     return render_template(
-        "User/table_booking.html",
+        "user/table_booking.html",
         available_tables=available_tables,
         booked_tables=booked_tables,
         current_time=now
@@ -1402,7 +1402,7 @@ def order_from_table(booking_id):
     cursor.close()
 
     return render_template(
-        "User/order_from_table.html",
+        "user/order_from_table.html",
         menu_items=menu_items,
         table_id=table_id,
         cart_count=cart_count
@@ -1476,7 +1476,7 @@ def view_table_cart():
     cursor.close()
 
     return render_template(
-        "User/table_cart.html",
+        "user/table_cart.html",
         cart_items=cart_items,
         table_id=table_id,
         booking_id=booking_id
@@ -1569,7 +1569,7 @@ def pay_table_order(table_id):
     }
 
     return render_template(
-        "User/pay_table_order.html",
+        "user/pay_table_order.html",
         amount=int(total * 100),
         razorpay_order_id=razorpay_order["id"],
         table_id=table_id,
@@ -4213,7 +4213,7 @@ def order_history():
     orders = cursor.fetchall()
     cursor.close()
 
-    return render_template("User/order_history.html", orders=orders)
+    return render_template("user/order_history.html", orders=orders)
 
 
 # ============================================================
@@ -4255,7 +4255,7 @@ def my_bookings():
         booking["can_order"] = start_order_time <= now <= booking_datetime
         booking["can_cancel"] = now < cancel_limit and booking["booking_status"] == "Booked"
 
-    return render_template("User/my_bookings.html", bookings=bookings)
+    return render_template("user/my_bookings.html", bookings=bookings)
 
 
 # ============================================================
